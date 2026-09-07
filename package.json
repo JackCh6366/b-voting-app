@@ -1,0 +1,17 @@
+{
+  "name": "voting-app",
+  "version": "1.0.0",
+  "description": "可編輯投票主題/選項、產生短連結、結果同步 Google Sheet 的投票系統原型",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "nanoid": "^3.3.7",
+    "googleapis": "^140.0.1",
+    "dotenv": "^16.4.5"
+  }
+}

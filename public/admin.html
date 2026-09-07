@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>投票管理後台</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>📊 投票管理後台</h1>
+    <p class="subtitle">建立投票主題與選項，產生短連結分享出去</p>
+
+    <div class="card">
+      <div id="createSection">
+        <label>投票主題</label>
+        <input type="text" id="titleInput" placeholder="例如：本次尾牙聚餐想吃什麼？" />
+
+        <label>選項</label>
+        <div id="optionsList"></div>
+        <button class="btn-secondary" id="addOptionBtn">+ 新增選項</button>
+
+        <button class="btn-primary btn-block" id="createBtn">建立投票</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:16px; margin-top:0;">所有投票</h2>
+      <div id="pollList"><div class="empty">尚未建立任何投票</div></div>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
