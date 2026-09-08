@@ -1,0 +1,15 @@
+# 環境變數與金鑰（絕對不能公開）
+.env
+.env.local
+credentials.json
+
+# 相依套件
+node_modules/
+
+# 系統/編輯器產生的檔案
+.DS_Store
+*.log
+npm-debug.log*
+
+# 執行期資料（視你的需求決定要不要排除；若想保留投票紀錄可以移除這行）
+# data/polls.json
