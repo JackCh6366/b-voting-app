@@ -1,68 +1,44 @@
 // db.js
-// 原型階段使用 JSON 檔案做為資料儲存。
-// 正式上線(上百人規模、需要並發寫入)建議換成 SQLite / PostgreSQL,
-// 只需要替換這個檔案裡的函式實作,其他程式碼不用動。
+// 使用 Vercel KV（Upstash Redis）做為資料儲存。
 
-const fs = require('fs');
-const path = require('path');
+const { kv } = require('@vercel/kv');
 
-const DB_FILE = path.join(__dirname, 'data', 'polls.json');
+const POLL_KEY = shortCode => `poll:${shortCode}`;
+const INDEX_KEY = 'poll:index';
 
-function ensureDbFile() {
-  if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify({ polls: {} }, null, 2));
-  }
-}
-
-function readDb() {
-  ensureDbFile();
-  const raw = fs.readFileSync(DB_FILE, 'utf-8');
-  return JSON.parse(raw);
-}
-
-function writeDb(data) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
-}
-
-// 建立一筆新投票
-function createPoll({ id, shortCode, title, options, createdAt }) {
-  const data = readDb();
-  data.polls[shortCode] = {
+async function createPoll({ id, shortCode, title, options, createdAt }) {
+  const poll = {
     id,
     shortCode,
     title,
     options: options.map((text, idx) => ({ index: idx, text, votes: 0 })),
     createdAt,
     active: true,
-    voteLog: [] // { timestamp, optionIndex }
+    voteLog: []
   };
-  writeDb(data);
-  return data.polls[shortCode];
+  await kv.set(POLL_KEY(shortCode), poll);
+  await kv.sadd(INDEX_KEY, shortCode);
+  return poll;
 }
 
-// 依短碼取得投票
-function getPollByShortCode(shortCode) {
-  const data = readDb();
-  return data.polls[shortCode] || null;
+async function getPollByShortCode(shortCode) {
+  const poll = await kv.get(POLL_KEY(shortCode));
+  return poll || null;
 }
 
-// 取得所有投票(管理後台列表用)
-function getAllPolls() {
-  const data = readDb();
-  return Object.values(data.polls).sort((a, b) => b.createdAt - a.createdAt);
+async function getAllPolls() {
+  const codes = await kv.smembers(INDEX_KEY);
+  if (!codes || codes.length === 0) return [];
+  const polls = await Promise.all(codes.map(code => kv.get(POLL_KEY(code))));
+  return polls.filter(Boolean).sort((a, b) => b.createdAt - a.createdAt);
 }
 
-// 更新投票主題/選項(編輯功能)
-function updatePoll(shortCode, { title, options, active }) {
-  const data = readDb();
-  const poll = data.polls[shortCode];
+async function updatePoll(shortCode, { title, options, active }) {
+  const poll = await getPollByShortCode(shortCode);
   if (!poll) return null;
-
   if (title !== undefined) poll.title = title;
   if (active !== undefined) poll.active = active;
-
   if (options !== undefined) {
-    // 保留舊選項的票數(依文字比對),新增的選項票數從 0 開始
     const oldByText = Object.fromEntries(poll.options.map(o => [o.text, o.votes]));
     poll.options = options.map((text, idx) => ({
       index: idx,
@@ -70,31 +46,26 @@ function updatePoll(shortCode, { title, options, active }) {
       votes: oldByText[text] || 0
     }));
   }
-
-  writeDb(data);
+  await kv.set(POLL_KEY(shortCode), poll);
   return poll;
 }
 
-// 新增一票
-function addVote(shortCode, optionIndex) {
-  const data = readDb();
-  const poll = data.polls[shortCode];
+async function addVote(shortCode, optionIndex) {
+  const poll = await getPollByShortCode(shortCode);
   if (!poll) return null;
   const option = poll.options.find(o => o.index === optionIndex);
   if (!option) return null;
-
   option.votes += 1;
   poll.voteLog.push({ timestamp: Date.now(), optionIndex });
-  writeDb(data);
+  await kv.set(POLL_KEY(shortCode), poll);
   return poll;
 }
 
-// 刪除投票
-function deletePoll(shortCode) {
-  const data = readDb();
-  if (!data.polls[shortCode]) return false;
-  delete data.polls[shortCode];
-  writeDb(data);
+async function deletePoll(shortCode) {
+  const existed = await getPollByShortCode(shortCode);
+  if (!existed) return false;
+  await kv.del(POLL_KEY(shortCode));
+  await kv.srem(INDEX_KEY, shortCode);
   return true;
 }
 
