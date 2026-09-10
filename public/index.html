@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>B-Voting 即時雲端投票系統</title>
+  <meta name="description" content="極簡、快速、支援即時開票與 Google Sheets 同步的現代化投票系統。" />
+  <link rel="stylesheet" href="/index.css" />
+</head>
+<body>
+  <!-- Ambient glow background decoration -->
+  <div class="bg-ambient"></div>
+
+  <div class="container">
+    <!-- Navbar -->
+    <header class="navbar">
+      <a href="/" class="brand">
+        <div class="brand-icon">🗳️</div>
+        <span class="brand-text">B-Voting</span>
+        <span class="brand-tag">Cloud</span>
+      </a>
+      <div class="nav-actions">
+        <a href="#polls-section" class="btn btn-secondary">瀏覽投票</a>
+        <a href="/admin.html" class="btn btn-primary">+ 建立投票 / 後台</a>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <main>
+      <section class="hero">
+        <div class="hero-badge">
+          <span class="pulse"></span>
+          <span>即時開票 · 免登入 · Google Sheets 雲端連動</span>
+        </div>
+        <h1 class="hero-title">
+          簡潔、快速、即刻反饋的<br />
+          <span class="gradient-text">現代化投票體驗</span>
+        </h1>
+        <p class="hero-subtitle">
+          團隊決策、好友聚餐、活動調查的最佳選擇。幾秒鐘內自訂投票並取得短連結，讓所有人輕鬆表達想法。
+        </p>
+
+        <!-- Quick Code Jump Box -->
+        <div class="quick-jump-box">
+          <input
+            type="text"
+            id="quickCodeInput"
+            class="quick-jump-input"
+            placeholder="輸入 6 碼投票代碼 (例如 z-UyFQ) 或貼上短連結"
+            autocomplete="off"
+          />
+          <button id="quickJumpBtn" class="btn btn-primary" type="button">
+            前往投票 ➔
+          </button>
+        </div>
+
+        <div class="hero-actions">
+          <a href="/admin.html" class="btn btn-accent">🛠️ 進入管理後台</a>
+          <a href="#polls-section" class="btn btn-secondary">⚡ 查看公開投票</a>
+        </div>
+      </section>
+
+      <!-- Highlights / Features -->
+      <section class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrap">⚡</div>
+          <h3 class="feature-title">秒級建立與分享</h3>
+          <p class="feature-desc">無須繁瑣註冊流程，輸入主題與選項即可快速產生專屬短網址，手機、平板、電腦皆能流暢開啟。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap">📊</div>
+          <h3 class="feature-title">即時視覺化統計</h3>
+          <p class="feature-desc">每投出一票即時計算並呈現百分比長條圖，支援防重複防呆機制，即時掌握最新開票趨勢。</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap">☁️</div>
+          <h3 class="feature-title">Google 試算表同步</h3>
+          <p class="feature-desc">串接 Google Sheets API，每筆投票即時寫入紀錄，後台更支援一鍵將統計匯整表覆寫至雲端保存。</p>
+        </div>
+      </section>
+
+      <!-- Live Polls Section -->
+      <section id="polls-section" class="polls-section">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <h2>🔥 探索投票活動</h2>
+            <p>即時探索目前發起的所有公開投票，點選即可參與</p>
+          </div>
+          <div class="filter-tabs">
+            <button class="tab-btn active" data-filter="all" type="button">全部</button>
+            <button class="tab-btn" data-filter="active" type="button">進行中</button>
+            <button class="tab-btn" data-filter="closed" type="button">已結束</button>
+          </div>
+        </div>
+
+        <div id="pollsContainer" class="polls-grid">
+          <!-- Dynamically populated via index.js -->
+          <div class="state-box">
+            <div class="state-icon">⏳</div>
+            <p>正在載入投票活動中...</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-inner">
+      <div>
+        <strong>B-Voting</strong> · 簡易敏捷投票系統原型
+      </div>
+      <div class="footer-status">
+        <span class="status-dot"></span>
+        <span>服務狀態正常 · Serverless KV 支援</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/index.js"></script>
+</body>
+</html>
