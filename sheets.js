@@ -1,13 +1,11 @@
 // sheets.js
 // 使用 Google Service Account 將投票紀錄 / 結果同步到 Google Sheet。
 //
-// 設定步驟(README.md 有詳細圖文版):
-// 1. 到 Google Cloud Console 建立一個專案,啟用 "Google Sheets API"
-// 2. 建立一組 Service Account,下載 JSON 金鑰,存到專案的 credentials.json
-//    (絕對不要把這個檔案上傳到公開 repo!)
-// 3. 打開你要寫入的 Google Sheet,把 credentials.json 裡的 client_email
-//    加到該 Sheet 的「共用」名單,並給「編輯者」權限
-// 4. 在 .env 設定 GOOGLE_SHEET_ID(從 Sheet 網址取得)
+// 金鑰有兩種讀取方式：
+// 1. 環境變數 GOOGLE_SERVICE_ACCOUNT_KEY（存整個 JSON 金鑰內容的字串）
+//    → 這是部署到 Vercel 時要用的方式，因為 Vercel 是 Serverless 架構，
+//      檔案系統唯讀且不持久，credentials.json 檔案放上去也沒用。
+// 2. 本機的 credentials.json 檔案 → 只在本機開發、且沒設定上面那個環境變數時，才會用這個。
 
 const { google } = require('googleapis');
 const path = require('path');
@@ -18,17 +16,32 @@ const SHEET_ID = process.env.GOOGLE_SHEET_ID;
 
 let sheetsClient = null;
 
+function loadCredentials() {
+  if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY) {
+    try {
+      return JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY);
+    } catch (err) {
+      throw new Error('環境變數 GOOGLE_SERVICE_ACCOUNT_KEY 的內容不是合法的 JSON，請確認貼上的是完整、沒有被截斷的金鑰內容');
+    }
+  }
+  if (fs.existsSync(CREDENTIALS_PATH)) {
+    return JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf-8'));
+  }
+  return null;
+}
+
 async function getSheetsClient() {
   if (sheetsClient) return sheetsClient;
 
-  if (!fs.existsSync(CREDENTIALS_PATH)) {
+  const credentials = loadCredentials();
+  if (!credentials) {
     throw new Error(
-      '找不到 credentials.json,請依 README 說明建立 Google Service Account 金鑰'
+      '找不到 Google 金鑰，請依 README 說明設定 credentials.json（本機）或 GOOGLE_SERVICE_ACCOUNT_KEY 環境變數（Vercel）'
     );
   }
 
   const auth = new google.auth.GoogleAuth({
-    keyFile: CREDENTIALS_PATH,
+    credentials,
     scopes: ['https://www.googleapis.com/auth/spreadsheets']
   });
 
@@ -37,12 +50,10 @@ async function getSheetsClient() {
   return sheetsClient;
 }
 
-// 是否已完成 Google Sheets 設定(讓 API 可以優雅地跳過同步,不中斷投票功能)
 function isConfigured() {
-  return Boolean(SHEET_ID) && fs.existsSync(CREDENTIALS_PATH);
+  return Boolean(SHEET_ID) && Boolean(loadCredentials());
 }
 
-// 每次有人投票時,附加一列紀錄到 "Votes" 分頁
 async function appendVoteRow({ pollTitle, optionText, timestamp }) {
   if (!isConfigured()) return { skipped: true, reason: 'Google Sheets 尚未設定' };
 
@@ -63,7 +74,6 @@ async function appendVoteRow({ pollTitle, optionText, timestamp }) {
   return { skipped: false };
 }
 
-// 把某個投票目前的彙總結果,覆寫到 "Results" 分頁
 async function syncResultsSummary({ pollTitle, options }) {
   if (!isConfigured()) return { skipped: true, reason: 'Google Sheets 尚未設定' };
 
