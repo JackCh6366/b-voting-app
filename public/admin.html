@@ -19,9 +19,36 @@
         <label>投票主題</label>
         <input type="text" id="titleInput" placeholder="例如：本次尾牙聚餐想吃什麼？" />
 
-        <label>選項</label>
+        <label>投票模式</label>
+        <div class="type-selector-group">
+          <label class="type-card-label checked" id="labelSingle">
+            <input type="radio" name="pollType" value="single" checked />
+            <div class="type-card-info">
+              <span class="type-card-title">🔘 單選投票</span>
+              <span class="type-card-desc">每位投票者限選 1 項</span>
+            </div>
+          </label>
+          <label class="type-card-label" id="labelMultiple">
+            <input type="radio" name="pollType" value="multiple" />
+            <div class="type-card-info">
+              <span class="type-card-title">☑️ 複選投票</span>
+              <span class="type-card-desc">每人可選多項，可自訂上限</span>
+            </div>
+          </label>
+        </div>
+
+        <div id="multiLimitSection" class="multi-limit-box" style="display: none;">
+          <div class="multi-limit-row">
+            <label style="margin: 0; font-size: 13px; font-weight: 600;">每人最多可選：</label>
+            <input type="number" id="maxChoicesInput" value="2" min="2" max="2" />
+            <span style="font-size: 13px; font-weight: 600;">票</span>
+            <span style="font-size: 12px; color: var(--text-muted);" id="maxChoicesHint">（上限不能超過選項總數）</span>
+          </div>
+        </div>
+
+        <label>選項清單</label>
         <div id="optionsList"></div>
-        <button class="btn-secondary" id="addOptionBtn">+ 新增選項</button>
+        <button class="btn-secondary" id="addOptionBtn" type="button">+ 新增選項</button>
 
         <button class="btn-primary btn-block" id="createBtn">建立投票</button>
       </div>

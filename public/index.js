@@ -100,12 +100,19 @@ function renderPolls() {
     // 選出票數最高的前 2-3 個選項做預覽
     const previewOptions = poll.options.slice(0, 3);
 
+    const modeBadge = poll.isMultiple
+      ? `<span class="poll-status-pill" style="background: #fef3c7; color: #92400e; border: 1px solid #fde68a;">複選 (最多 ${poll.maxChoices || 2} 票)</span>`
+      : `<span class="poll-status-pill" style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe;">單選</span>`;
+
     return `
       <div class="poll-card">
         <div class="poll-header">
-          <span class="poll-status-pill ${poll.active ? 'active' : 'inactive'}">
-            ${poll.active ? '進行中' : '已結束'}
-          </span>
+          <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+            ${modeBadge}
+            <span class="poll-status-pill ${poll.active ? 'active' : 'inactive'}">
+              ${poll.active ? '進行中' : '已結束'}
+            </span>
+          </div>
           <span style="font-size: 12px; color: var(--text-light);">${dateStr}</span>
         </div>
 

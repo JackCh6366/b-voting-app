@@ -23,10 +23,19 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ---------- 管理 API ----------
 
 app.post('/api/polls', async (req, res) => {
-  const { title, options } = req.body;
+  const { title, options, isMultiple, maxChoices } = req.body;
 
   if (!title || !Array.isArray(options) || options.length < 2) {
-    return res.status(400).json({ error: '請提供投票主題,以及至少兩個選項' });
+    return res.status(400).json({ error: '請提供投票主題，以及至少兩個選項' });
+  }
+
+  const multiple = Boolean(isMultiple);
+  let limit = 1;
+  if (multiple) {
+    limit = Number(maxChoices) || 2;
+    if (limit < 2 || limit > options.length) {
+      return res.status(400).json({ error: `複選投票的最高票數限制必須介於 2 到 ${options.length} 之間` });
+    }
   }
 
   try {
@@ -36,6 +45,8 @@ app.post('/api/polls', async (req, res) => {
       shortCode,
       title,
       options,
+      isMultiple: multiple,
+      maxChoices: limit,
       createdAt: Date.now()
     });
 
@@ -64,12 +75,20 @@ app.get('/api/polls', async (req, res) => {
 app.get('/api/polls/:shortCode', async (req, res) => {
   const poll = await db.getPollByShortCode(req.params.shortCode);
   if (!poll) return res.status(404).json({ error: '找不到這個投票' });
-  res.json({ ...poll, voteUrl: `${getBaseUrl(req)}/v/${poll.shortCode}` });
+
+  const voterId = req.query.voterId;
+  const userVotes = (poll.voters && voterId) ? (poll.voters[voterId] || null) : null;
+
+  res.json({
+    ...poll,
+    userVotes,
+    voteUrl: `${getBaseUrl(req)}/v/${poll.shortCode}`
+  });
 });
 
 app.put('/api/polls/:shortCode', async (req, res) => {
-  const { title, options, active } = req.body;
-  const poll = await db.updatePoll(req.params.shortCode, { title, options, active });
+  const { title, options, active, isMultiple, maxChoices } = req.body;
+  const poll = await db.updatePoll(req.params.shortCode, { title, options, active, isMultiple, maxChoices });
   if (!poll) return res.status(404).json({ error: '找不到這個投票' });
   res.json(poll);
 });
@@ -106,28 +125,58 @@ app.get('/v/:shortCode', async (req, res) => {
 });
 
 app.post('/api/polls/:shortCode/vote', async (req, res) => {
-  const { optionIndex } = req.body;
-  const poll = await db.getPollByShortCode(req.params.shortCode);
+  const { optionIndices, optionIndex } = req.body;
+  let voterId = req.body.voterId;
 
-  if (!poll) return res.status(404).json({ error: '找不到這個投票' });
-  if (!poll.active) return res.status(403).json({ error: '這個投票已經結束' });
-  if (typeof optionIndex !== 'number') {
-    return res.status(400).json({ error: '請選擇一個選項' });
+  if (!voterId) {
+    voterId = nanoid(16);
   }
 
-  const updated = await db.addVote(req.params.shortCode, optionIndex);
-  if (!updated) return res.status(400).json({ error: '選項不存在' });
+  // 相容單個選項與陣列
+  let selected = optionIndices;
+  if (!Array.isArray(selected) && typeof optionIndex === 'number') {
+    selected = [optionIndex];
+  }
 
-  const option = updated.options.find(o => o.index === optionIndex);
+  if (!Array.isArray(selected) || selected.length === 0) {
+    return res.status(400).json({ error: '請至少選擇一個選項' });
+  }
+
+  const poll = await db.getPollByShortCode(req.params.shortCode);
+  if (!poll) return res.status(404).json({ error: '找不到這個投票' });
+  if (!poll.active) return res.status(403).json({ error: '這個投票已經結束，無法更換選項或投票' });
+
+  const limit = poll.isMultiple ? (poll.maxChoices || 2) : 1;
+  if (selected.length > limit) {
+    return res.status(400).json({ error: `本投票最多只能選擇 ${limit} 項` });
+  }
+
+  const voteResult = await db.submitVote(req.params.shortCode, { voterId, optionIndices: selected });
+  if (voteResult.error) {
+    return res.status(400).json({ error: voteResult.error });
+  }
+
+  const updated = voteResult.poll;
+  const chosenTexts = selected
+    .map(idx => updated.options.find(o => o.index === idx)?.text)
+    .filter(Boolean);
+
+  const prefix = voteResult.isChange ? '【更換選項】' : '';
   sheets
     .appendVoteRow({
       pollTitle: updated.title,
-      optionText: option.text,
+      optionText: `${prefix}${chosenTexts.join(' + ')}`,
       timestamp: Date.now()
     })
     .catch(err => console.error('Google Sheets 同步失敗:', err.message));
 
-  res.json({ success: true, results: updated.options });
+  res.json({
+    success: true,
+    results: updated.options,
+    userVotes: selected,
+    voterId,
+    isChange: voteResult.isChange
+  });
 });
 
 app.listen(PORT, () => {
