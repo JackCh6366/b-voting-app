@@ -163,7 +163,7 @@ app.post('/api/polls/:shortCode/vote', async (req, res) => {
     .filter(Boolean);
 
   const prefix = voteResult.isChange ? '【更換選項】' : '';
-  const nameLabel = voterName ? `[暱稱: ${voterName}] ` : '';
+  const nameLabel = voterName ? `[投票者: ${voterName}] ` : '';
   sheets
     .appendVoteRow({
       pollTitle: updated.title,
