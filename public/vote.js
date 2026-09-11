@@ -311,7 +311,7 @@ function renderResults(poll, message, userVotes = []) {
     <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--text-muted);">
       <span>總累計票數：<strong>${total}</strong> 票</span>
       <button class="btn-secondary" id="refreshBtn" style="padding: 6px 12px; font-size: 13px;">
-        🔄 重新整理解果
+        🔄 重新整理結果
       </button>
     </div>
   `;
