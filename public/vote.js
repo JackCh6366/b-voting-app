@@ -109,9 +109,6 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
           maxlength="20"
           placeholder="請輸入你的暱稱..."
           style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;"
-          oninput="document.getElementById('nameCount').textContent = this.value.length"
-          onfocus="this.style.borderColor='#6366f1'"
-          onblur="this.style.borderColor='#d1d5db'"
         />
         <div style="text-align: right; font-size: 11px; color: #9ca3af; margin-top: 4px;">
           <span id="nameCount">0</span> / 20 字
@@ -137,10 +134,6 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
       const idx = Number(el.dataset.index);
       const isChecked = selected.has(idx);
       el.classList.toggle('selected', isChecked);
-      const tag = el.querySelector('span:last-child');
-      if (isChecked && !tag.classList.contains('option-vote-left')) {
-        // Tag exists or update
-      }
     });
 
     if (isMulti) {
@@ -151,8 +144,13 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
     submitBtn.disabled = selected.size === 0 || voterNameInput.value.trim() === '';
   }
 
-  // 暱稱輸入即時驗證：有填字才解鎖按鈕
-  voterNameInput.addEventListener('input', updateUI);
+  // 暱稱輸入即時驗證：有填字才解鎖按鈕；同時更新字數計數
+  voterNameInput.addEventListener('input', () => {
+    document.getElementById('nameCount').textContent = voterNameInput.value.length;
+    updateUI();
+  });
+  voterNameInput.addEventListener('focus', () => { voterNameInput.style.borderColor = '#6366f1'; });
+  voterNameInput.addEventListener('blur', () => { voterNameInput.style.borderColor = '#d1d5db'; });
 
   pollCard.querySelectorAll('.option-vote').forEach(el => {
     el.onclick = () => {
