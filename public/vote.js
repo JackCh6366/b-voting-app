@@ -98,7 +98,26 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
     </div>
 
     <div style="margin-top: 20px;">
-      <button class="btn-primary btn-block" id="submitVoteBtn" ${selected.size === 0 ? 'disabled' : ''}>
+      <div style="margin-bottom: 14px;">
+        <label for="voterNameInput" style="display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;">
+          📝 你的暱稱 <span style="color:#ef4444;">*</span>
+          <span style="font-size: 11px; font-weight: 400; color: #9ca3af; margin-left: 4px;">（必填，最多 20 個字）</span>
+        </label>
+        <input
+          type="text"
+          id="voterNameInput"
+          maxlength="20"
+          placeholder="請輸入你的暱稱..."
+          style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s;"
+          oninput="document.getElementById('nameCount').textContent = this.value.length"
+          onfocus="this.style.borderColor='#6366f1'"
+          onblur="this.style.borderColor='#d1d5db'"
+        />
+        <div style="text-align: right; font-size: 11px; color: #9ca3af; margin-top: 4px;">
+          <span id="nameCount">0</span> / 20 字
+        </div>
+      </div>
+      <button class="btn-primary btn-block" id="submitVoteBtn" disabled>
         ${isEditing ? '🔄 確認更新我的投票' : '確認送出投票 ➔'}
       </button>
       ${isEditing ? `
@@ -111,6 +130,7 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
 
   const submitBtn = document.getElementById('submitVoteBtn');
   const counterText = document.getElementById('counterText');
+  const voterNameInput = document.getElementById('voterNameInput');
 
   function updateUI() {
     pollCard.querySelectorAll('.option-vote').forEach(el => {
@@ -127,8 +147,12 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
       counterText.textContent = `已選 ${selected.size} / ${maxLimit} 票`;
       counterText.classList.toggle('full', selected.size === maxLimit);
     }
-    submitBtn.disabled = selected.size === 0;
+    // 按鈕：需同時有選項 且 已填暱稱
+    submitBtn.disabled = selected.size === 0 || voterNameInput.value.trim() === '';
   }
+
+  // 暱稱輸入即時驗證：有填字才解鎖按鈕
+  voterNameInput.addEventListener('input', updateUI);
 
   pollCard.querySelectorAll('.option-vote').forEach(el => {
     el.onclick = () => {
@@ -182,6 +206,14 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
   submitBtn.onclick = async () => {
     if (selected.size === 0) return;
 
+    const voterName = voterNameInput.value.trim();
+    if (!voterName) {
+      voterNameInput.focus();
+      voterNameInput.style.borderColor = '#ef4444';
+      alert('請填寫你的暱稱才能送出投票！');
+      return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = '送出中...';
     pollCard.querySelectorAll('.option-vote').forEach(o => (o.style.pointerEvents = 'none'));
@@ -193,6 +225,7 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           voterId,
+          voterName,
           optionIndices
         })
       });

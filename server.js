@@ -127,6 +127,7 @@ app.get('/v/:shortCode', async (req, res) => {
 app.post('/api/polls/:shortCode/vote', async (req, res) => {
   const { optionIndices, optionIndex } = req.body;
   let voterId = req.body.voterId;
+  const voterName = (req.body.voterName || '').toString().trim().slice(0, 20);
 
   if (!voterId) {
     voterId = nanoid(16);
@@ -162,10 +163,11 @@ app.post('/api/polls/:shortCode/vote', async (req, res) => {
     .filter(Boolean);
 
   const prefix = voteResult.isChange ? '【更換選項】' : '';
+  const nameLabel = voterName ? `[暱稱: ${voterName}] ` : '';
   sheets
     .appendVoteRow({
       pollTitle: updated.title,
-      optionText: `${prefix}${chosenTexts.join(' + ')}`,
+      optionText: `${nameLabel}${prefix}${chosenTexts.join(' + ')}`,
       timestamp: Date.now()
     })
     .catch(err => console.error('Google Sheets 同步失敗:', err.message));
