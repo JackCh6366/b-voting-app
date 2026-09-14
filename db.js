@@ -48,11 +48,12 @@ function writeLocalDb(data) {
 }
 
 // 建立一筆新投票
-async function createPoll({ id, shortCode, title, options, isMultiple = false, maxChoices = 1, createdAt }) {
+async function createPoll({ id, shortCode, title, options, isMultiple = false, maxChoices = 1, createdAt, note = '' }) {
   const poll = {
     id,
     shortCode,
     title,
+    note: typeof note === 'string' ? note.trim() : '',
     options: options.map((text, idx) => ({ index: idx, text, votes: 0 })),
     isMultiple: Boolean(isMultiple),
     maxChoices: isMultiple ? Math.max(2, Math.min(options.length, Number(maxChoices) || 2)) : 1,
@@ -99,11 +100,12 @@ async function getAllPolls() {
 }
 
 // 更新投票資訊
-async function updatePoll(shortCode, { title, options, active, isMultiple, maxChoices }) {
+async function updatePoll(shortCode, { title, options, active, isMultiple, maxChoices, note }) {
   const poll = await getPollByShortCode(shortCode);
   if (!poll) return null;
 
   if (title !== undefined) poll.title = title;
+  if (note !== undefined) poll.note = typeof note === 'string' ? note.trim() : '';
   if (active !== undefined) poll.active = active;
   if (isMultiple !== undefined) poll.isMultiple = Boolean(isMultiple);
   if (maxChoices !== undefined) {

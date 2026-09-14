@@ -4,6 +4,7 @@ const path = require('path');
 const { nanoid } = require('nanoid');
 const db = require('./db');
 const sheets = require('./sheets');
+const ai = require('./ai');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,13 +18,14 @@ function getBaseUrl(req) {
   return `${req.protocol}://${req.get('host')}`;
 }
 
-app.use(express.json());
+// 支援 Base64 圖片上傳（預設 100KB 太小，放寬至 15MB 支援 10MB 圖片）
+app.use(express.json({ limit: '15mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- 管理 API ----------
 
 app.post('/api/polls', async (req, res) => {
-  const { title, options, isMultiple, maxChoices } = req.body;
+  const { title, options, isMultiple, maxChoices, note } = req.body;
 
   if (!title || !Array.isArray(options) || options.length < 2) {
     return res.status(400).json({ error: '請提供投票主題，以及至少兩個選項' });
@@ -44,6 +46,7 @@ app.post('/api/polls', async (req, res) => {
       id: nanoid(12),
       shortCode,
       title,
+      note,
       options,
       isMultiple: multiple,
       maxChoices: limit,
@@ -87,10 +90,22 @@ app.get('/api/polls/:shortCode', async (req, res) => {
 });
 
 app.put('/api/polls/:shortCode', async (req, res) => {
-  const { title, options, active, isMultiple, maxChoices } = req.body;
-  const poll = await db.updatePoll(req.params.shortCode, { title, options, active, isMultiple, maxChoices });
+  const { title, options, active, isMultiple, maxChoices, note } = req.body;
+  const poll = await db.updatePoll(req.params.shortCode, { title, options, active, isMultiple, maxChoices, note });
   if (!poll) return res.status(404).json({ error: '找不到這個投票' });
   res.json(poll);
+});
+
+// ---------- AI 輔助建立 API ----------
+
+app.post('/api/ai/extract-poll', async (req, res) => {
+  const { image, provider, prompt } = req.body;
+  try {
+    const result = await ai.extractPollFromImage({ image, provider, prompt });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 app.delete('/api/polls/:shortCode', async (req, res) => {

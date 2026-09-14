@@ -2,6 +2,7 @@ const optionsList = document.getElementById('optionsList');
 const addOptionBtn = document.getElementById('addOptionBtn');
 const createBtn = document.getElementById('createBtn');
 const titleInput = document.getElementById('titleInput');
+const noteInput = document.getElementById('noteInput');
 const pollListEl = document.getElementById('pollList');
 const pollTypeRadios = document.querySelectorAll('input[name="pollType"]');
 const multiLimitSection = document.getElementById('multiLimitSection');
@@ -9,6 +10,30 @@ const maxChoicesInput = document.getElementById('maxChoicesInput');
 const maxChoicesHint = document.getElementById('maxChoicesHint');
 const labelSingle = document.getElementById('labelSingle');
 const labelMultiple = document.getElementById('labelMultiple');
+
+// AI 輔助建立元件
+const aiUploadDropzone = document.getElementById('aiUploadDropzone');
+const aiImageInput = document.getElementById('aiImageInput');
+const aiUploadPlaceholder = document.getElementById('aiUploadPlaceholder');
+const aiPreviewWrap = document.getElementById('aiPreviewWrap');
+const aiPreviewImg = document.getElementById('aiPreviewImg');
+const aiRemoveImgBtn = document.getElementById('aiRemoveImgBtn');
+const aiPromptInput = document.getElementById('aiPromptInput');
+const aiAnalyzeBtn = document.getElementById('aiAnalyzeBtn');
+const labelGemini = document.getElementById('labelGemini');
+const labelNvidia = document.getElementById('labelNvidia');
+const aiProviderRadios = document.querySelectorAll('input[name="aiProvider"]');
+
+let currentImageBase64 = null;
+
+// 編輯備註 Modal 元件
+const editNoteModal = document.getElementById('editNoteModal');
+const modalPollTitle = document.getElementById('modalPollTitle');
+const modalNoteTextarea = document.getElementById('modalNoteTextarea');
+const closeNoteModalBtn = document.getElementById('closeNoteModalBtn');
+const cancelNoteModalBtn = document.getElementById('cancelNoteModalBtn');
+const saveNoteModalBtn = document.getElementById('saveNoteModalBtn');
+let currentEditingShortCode = null;
 
 function updateMultiLimitBounds() {
   const count = optionsList.querySelectorAll('.option-row').length;
@@ -57,6 +82,7 @@ function addOptionRow(value = '') {
 }
 
 function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
@@ -67,8 +93,137 @@ addOptionBtn.onclick = () => addOptionRow();
 addOptionRow();
 addOptionRow();
 
+// ---------- AI 輔助建立邏輯 ----------
+
+aiProviderRadios.forEach(radio => {
+  radio.addEventListener('change', () => {
+    if (radio.value === 'gemini') {
+      labelGemini.classList.add('checked');
+      labelNvidia.classList.remove('checked');
+    } else {
+      labelNvidia.classList.add('checked');
+      labelGemini.classList.remove('checked');
+    }
+  });
+});
+
+function handleImageFile(file) {
+  if (!file) return;
+
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!validTypes.includes(file.type)) {
+    return alert('請上傳 JPG、PNG 或 WEBP 格式的圖片！');
+  }
+
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    return alert('圖片檔案過大，請選擇小於 10MB 的圖片！');
+  }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    currentImageBase64 = e.target.result;
+    aiPreviewImg.src = currentImageBase64;
+    aiPreviewWrap.style.display = 'inline-block';
+    aiUploadPlaceholder.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+aiUploadDropzone.addEventListener('click', e => {
+  if (e.target !== aiRemoveImgBtn) {
+    aiImageInput.click();
+  }
+});
+
+aiImageInput.addEventListener('change', e => {
+  if (e.target.files && e.target.files[0]) {
+    handleImageFile(e.target.files[0]);
+  }
+});
+
+aiUploadDropzone.addEventListener('dragover', e => {
+  e.preventDefault();
+  aiUploadDropzone.style.borderColor = '#9333ea';
+  aiUploadDropzone.style.background = '#faf5ff';
+});
+
+aiUploadDropzone.addEventListener('dragleave', () => {
+  aiUploadDropzone.style.borderColor = '';
+  aiUploadDropzone.style.background = '';
+});
+
+aiUploadDropzone.addEventListener('drop', e => {
+  e.preventDefault();
+  aiUploadDropzone.style.borderColor = '';
+  aiUploadDropzone.style.background = '';
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+    handleImageFile(e.dataTransfer.files[0]);
+  }
+});
+
+aiRemoveImgBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  currentImageBase64 = null;
+  aiImageInput.value = '';
+  aiPreviewImg.src = '';
+  aiPreviewWrap.style.display = 'none';
+  aiUploadPlaceholder.style.display = 'block';
+});
+
+aiAnalyzeBtn.onclick = async () => {
+  if (!currentImageBase64) {
+    return alert('請先上傳要辨識的圖片（例如菜單、海報或清單截圖）！');
+  }
+
+  const selectedProvider = document.querySelector('input[name="aiProvider"]:checked')?.value || 'gemini';
+  const prompt = aiPromptInput.value.trim();
+
+  aiAnalyzeBtn.disabled = true;
+  const originalText = aiAnalyzeBtn.innerHTML;
+  aiAnalyzeBtn.innerHTML = '⏳ AI 正在分析圖片中，請稍候...';
+
+  try {
+    const res = await fetch('/api/ai/extract-poll', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        image: currentImageBase64,
+        provider: selectedProvider,
+        prompt
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'AI 分析失敗');
+    }
+
+    if (data.title) {
+      titleInput.value = data.title;
+    }
+
+    if (Array.isArray(data.options) && data.options.length > 0) {
+      optionsList.innerHTML = '';
+      data.options.forEach(opt => addOptionRow(opt));
+      updateMultiLimitBounds();
+    }
+
+    alert('✨ AI 分析完成！已自動將主題與選項填入下方表單。\n請仔細檢查並可自由修改，確認無誤後點選「建立投票」。');
+    titleInput.scrollIntoView({ behavior: 'smooth' });
+  } catch (err) {
+    alert(`AI 分析失敗：${err.message}`);
+  } finally {
+    aiAnalyzeBtn.disabled = false;
+    aiAnalyzeBtn.innerHTML = originalText;
+  }
+};
+
+// ---------- 建立投票 ----------
+
 createBtn.onclick = async () => {
   const title = titleInput.value.trim();
+  const note = noteInput.value.trim();
   const options = [...optionsList.querySelectorAll('input[type="text"]')]
     .map(i => i.value.trim())
     .filter(Boolean);
@@ -92,12 +247,13 @@ createBtn.onclick = async () => {
     const res = await fetch('/api/polls', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, options, isMultiple, maxChoices })
+      body: JSON.stringify({ title, note, options, isMultiple, maxChoices })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || '建立失敗');
 
     titleInput.value = '';
+    noteInput.value = '';
     optionsList.innerHTML = '';
     addOptionRow();
     addOptionRow();
@@ -118,6 +274,53 @@ createBtn.onclick = async () => {
   }
 };
 
+// ---------- 編輯備註 Modal 控制 ----------
+
+function openEditNoteModal(poll) {
+  currentEditingShortCode = poll.shortCode;
+  modalPollTitle.textContent = poll.title;
+  modalNoteTextarea.value = poll.note || '';
+  editNoteModal.classList.add('active');
+  modalNoteTextarea.focus();
+}
+
+function closeEditNoteModal() {
+  currentEditingShortCode = null;
+  editNoteModal.classList.remove('active');
+}
+
+closeNoteModalBtn.onclick = closeEditNoteModal;
+cancelNoteModalBtn.onclick = closeEditNoteModal;
+
+saveNoteModalBtn.onclick = async () => {
+  if (!currentEditingShortCode) return;
+
+  saveNoteModalBtn.disabled = true;
+  saveNoteModalBtn.textContent = '儲存中...';
+
+  try {
+    const newNote = modalNoteTextarea.value.trim();
+    const res = await fetch(`/api/polls/${currentEditingShortCode}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ note: newNote })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || '備註更新失敗');
+
+    closeEditNoteModal();
+    await loadPolls();
+  } catch (err) {
+    alert(`儲存失敗：${err.message}`);
+  } finally {
+    saveNoteModalBtn.disabled = false;
+    saveNoteModalBtn.textContent = '儲存備註';
+  }
+};
+
+// ---------- 讀取與渲染所有投票 ----------
+
 async function loadPolls() {
   const res = await fetch('/api/polls');
   const polls = await res.json();
@@ -133,8 +336,12 @@ async function loadPolls() {
       ? `<span class="badge multi">複選 (最多 ${p.maxChoices || 2} 票)</span>`
       : `<span class="badge single">單選</span>`;
 
+    const noteHtml = p.note
+      ? `<div class="admin-poll-note">📝 <strong>備註：</strong>${escapeHtml(p.note)}</div>`
+      : '';
+
     return `
-      <div class="poll-item">
+      <div class="poll-item" data-code="${p.shortCode}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap: 12px;">
           <div>
             <div class="poll-title">${escapeHtml(p.title)}</div>
@@ -144,7 +351,8 @@ async function loadPolls() {
               <span>共 <strong>${totalVotes}</strong> 票</span>
             </div>
           </div>
-          <div style="display:flex; gap:6px; flex-shrink: 0;">
+          <div style="display:flex; gap:6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
+            <button class="btn-secondary editNoteBtn" data-code="${p.shortCode}">編輯備註</button>
             <button class="btn-secondary toggleBtn" data-code="${p.shortCode}" data-active="${p.active}">
               ${p.active ? '結束投票' : '重新開放'}
             </button>
@@ -152,6 +360,7 @@ async function loadPolls() {
             <button class="btn-danger deleteBtn" data-code="${p.shortCode}">刪除</button>
           </div>
         </div>
+        ${noteHtml}
         <div class="link-box" style="margin-top:12px;">
           <span style="flex:1; font-family: monospace;">${p.voteUrl}</span>
           <button class="btn-secondary copyBtn" data-url="${p.voteUrl}">複製</button>
@@ -222,6 +431,17 @@ async function loadPolls() {
       }
     };
   });
+
+  pollListEl.querySelectorAll('.editNoteBtn').forEach(btn => {
+    btn.onclick = () => {
+      const code = btn.dataset.code;
+      const poll = polls.find(p => p.shortCode === code);
+      if (poll) {
+        openEditNoteModal(poll);
+      }
+    };
+  });
 }
 
 loadPolls();
+

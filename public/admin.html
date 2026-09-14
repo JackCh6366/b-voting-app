@@ -16,6 +16,55 @@
 
     <div class="card">
       <div id="createSection">
+        <!-- AI 輔助建立區塊 -->
+        <div class="ai-helper-card">
+          <div class="ai-helper-header">
+            <div>
+              <div class="ai-helper-title">✨ AI 助理輔助建立投票</div>
+              <div class="ai-helper-desc">上傳菜單、活動海報或清單截圖，自動識別主題與選項</div>
+            </div>
+          </div>
+
+          <label style="margin-top:0;">1. 上傳圖片（支援 JPG/PNG/WEBP，10MB 內）</label>
+          <div class="ai-upload-box" id="aiUploadDropzone">
+            <input type="file" id="aiImageInput" accept="image/jpeg,image/png,image/webp" style="display:none;" />
+            <div id="aiUploadPlaceholder">
+              <span style="font-size: 24px;">📷</span>
+              <div style="font-size: 13px; font-weight: 600; color: #6b21a8; margin-top: 4px;">點擊選擇圖片 或 拖曳圖片至此</div>
+              <div style="font-size: 11px; color: #9333ea;">單張圖片，大小不超過 10MB</div>
+            </div>
+            <div id="aiPreviewWrap" style="display:none;" class="ai-preview-container">
+              <img id="aiPreviewImg" class="ai-preview-img" alt="預覽圖" />
+              <button type="button" id="aiRemoveImgBtn" class="ai-remove-img" title="移除圖片">✕</button>
+            </div>
+          </div>
+
+          <label>2. 選擇 AI 模型</label>
+          <div class="ai-provider-group">
+            <label class="ai-provider-label checked" id="labelGemini">
+              <input type="radio" name="aiProvider" value="gemini" checked />
+              <div>
+                <div>Google Gemini</div>
+                <div style="font-size:11px; font-weight:400; color:#7e22ce;">gemini-3.6-flash</div>
+              </div>
+            </label>
+            <label class="ai-provider-label" id="labelNvidia">
+              <input type="radio" name="aiProvider" value="nvidia" />
+              <div>
+                <div>NVIDIA NIM</div>
+                <div style="font-size:11px; font-weight:400; color:#7e22ce;">llama-3.2-90b-vision</div>
+              </div>
+            </label>
+          </div>
+
+          <label>3. 補充提示（選填）</label>
+          <input type="text" id="aiPromptInput" placeholder="例如：只列出主餐類別、請將飲料甜點排除" style="background:#fff;" />
+
+          <button type="button" class="btn-primary btn-ai" id="aiAnalyzeBtn">
+            🪄 使用 AI 分析圖片並填入表單
+          </button>
+        </div>
+
         <label>投票主題</label>
         <input type="text" id="titleInput" placeholder="例如：本次尾牙聚餐想吃什麼？" />
 
@@ -50,6 +99,9 @@
         <div id="optionsList"></div>
         <button class="btn-secondary" id="addOptionBtn" type="button">+ 新增選項</button>
 
+        <label for="noteInput">投票備註</label>
+        <textarea id="noteInput" rows="3" placeholder="補充說明，例如活動規則、截止時間等（選填）"></textarea>
+
         <button class="btn-primary btn-block" id="createBtn">建立投票</button>
       </div>
     </div>
@@ -57,6 +109,25 @@
     <div class="card">
       <h2 style="font-size:16px; margin-top:0;">所有投票</h2>
       <div id="pollList"><div class="empty">尚未建立任何投票</div></div>
+    </div>
+  </div>
+
+  <!-- 編輯備註彈跳視窗 -->
+  <div class="modal-overlay" id="editNoteModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">✏️ 編輯投票備註</div>
+        <button type="button" class="btn-secondary" id="closeNoteModalBtn" style="padding: 4px 8px; font-size: 12px;">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 0; margin-bottom: 12px;">
+        投票主題：<strong id="modalPollTitle" style="color: var(--text-main);"></strong>
+      </p>
+      <label for="modalNoteTextarea" style="margin-top:0;">備註說明內容（支援清空或事後補上）：</label>
+      <textarea id="modalNoteTextarea" rows="4" placeholder="補充說明，例如活動規則、截止時間等（選填）"></textarea>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelNoteModalBtn">取消</button>
+        <button type="button" class="btn-primary" id="saveNoteModalBtn">儲存備註</button>
+      </div>
     </div>
   </div>
 

@@ -80,6 +80,12 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
     </div>
 
     <h1>${escapeHtml(poll.title)}</h1>
+    ${poll.note && poll.note.trim() ? `
+      <div class="poll-note-box">
+        <div class="poll-note-header">📌 投票說明 / 備註</div>
+        <div>${escapeHtml(poll.note)}</div>
+      </div>
+    ` : ''}
     <p class="subtitle">${isEditing ? '請修改你的選項並點選「更新我的投票」' : (isMulti ? `請勾選你支持的選項（最多可選 ${maxLimit} 項）：` : '請點選你支持的選項：')}</p>
 
     <div id="optionsArea">
@@ -282,6 +288,12 @@ function renderResults(poll, message, userVotes = []) {
     </div>
 
     <h1>${escapeHtml(poll.title)}</h1>
+    ${poll.note && poll.note.trim() ? `
+      <div class="poll-note-box">
+        <div class="poll-note-header">📌 投票說明 / 備註</div>
+        <div>${escapeHtml(poll.note)}</div>
+      </div>
+    ` : ''}
     <p class="subtitle">${escapeHtml(message)}</p>
 
     ${noticeHtml}
