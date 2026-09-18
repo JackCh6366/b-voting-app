@@ -35,6 +35,110 @@ const cancelNoteModalBtn = document.getElementById('cancelNoteModalBtn');
 const saveNoteModalBtn = document.getElementById('saveNoteModalBtn');
 let currentEditingShortCode = null;
 
+// ---------- 管理者金鑰儲存與狀態管理 ----------
+const authModal = document.getElementById('authModal');
+const adminKeyInput = document.getElementById('adminKeyInput');
+const closeAuthModalBtn = document.getElementById('closeAuthModalBtn');
+const cancelAuthModalBtn = document.getElementById('cancelAuthModalBtn');
+const saveAuthModalBtn = document.getElementById('saveAuthModalBtn');
+const adminAuthBadge = document.getElementById('adminAuthBadge');
+const adminAuthToggleBtn = document.getElementById('adminAuthToggleBtn');
+
+function getAdminKey() {
+  return localStorage.getItem('bv_admin_key') || '';
+}
+
+function setAdminKey(key) {
+  if (key && key.trim()) {
+    localStorage.setItem('bv_admin_key', key.trim());
+  } else {
+    localStorage.removeItem('bv_admin_key');
+  }
+  updateAuthStatusUI();
+}
+
+function clearAdminKey() {
+  localStorage.removeItem('bv_admin_key');
+  updateAuthStatusUI();
+}
+
+function updateAuthStatusUI() {
+  const key = getAdminKey();
+  if (key) {
+    adminAuthBadge.textContent = '🟢 已解鎖';
+    adminAuthBadge.style.background = '#ecfdf5';
+    adminAuthBadge.style.color = '#065f46';
+    adminAuthBadge.style.borderColor = '#a7f3d0';
+    adminAuthToggleBtn.textContent = '🔒 鎖定 / 登出';
+  } else {
+    adminAuthBadge.textContent = '🔒 未解鎖';
+    adminAuthBadge.style.background = '#fef2f2';
+    adminAuthBadge.style.color = '#991b1b';
+    adminAuthBadge.style.borderColor = '#fecaca';
+    adminAuthToggleBtn.textContent = '🔑 輸入金鑰';
+  }
+}
+
+function openAuthModal() {
+  adminKeyInput.value = getAdminKey();
+  authModal.classList.add('active');
+  adminKeyInput.focus();
+}
+
+function closeAuthModal() {
+  authModal.classList.remove('active');
+}
+
+closeAuthModalBtn.onclick = closeAuthModal;
+cancelAuthModalBtn.onclick = closeAuthModal;
+
+saveAuthModalBtn.onclick = () => {
+  const val = adminKeyInput.value.trim();
+  if (!val) {
+    alert('請輸入管理者金鑰！');
+    adminKeyInput.focus();
+    return;
+  }
+  setAdminKey(val);
+  closeAuthModal();
+  loadPolls();
+};
+
+adminKeyInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveAuthModalBtn.click();
+});
+
+adminAuthToggleBtn.onclick = () => {
+  if (getAdminKey()) {
+    if (confirm('確定要登出並清除此瀏覽器上的管理金鑰嗎？\n登出後執行管理操作需要重新輸入金鑰。')) {
+      clearAdminKey();
+      alert('已成功登出並鎖定管理後台！');
+    }
+  } else {
+    openAuthModal();
+  }
+};
+
+function getAuthHeaders(headers = {}) {
+  const key = getAdminKey();
+  const res = { ...headers };
+  if (key) {
+    res['Authorization'] = `Bearer ${key}`;
+  }
+  return res;
+}
+
+function handleAuthError(res, data) {
+  if (res.status === 401) {
+    clearAdminKey();
+    openAuthModal();
+    throw new Error('未授權：管理金鑰無效或尚未提供，請重新輸入正確金鑰！');
+  }
+  if (!res.ok) {
+    throw new Error((data && data.error) || `操作失敗 (HTTP ${res.status})`);
+  }
+}
+
 function updateMultiLimitBounds() {
   const count = optionsList.querySelectorAll('.option-row').length;
   const maxLimit = Math.max(2, count);
@@ -186,7 +290,7 @@ aiAnalyzeBtn.onclick = async () => {
   try {
     const res = await fetch('/api/ai/extract-poll', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         image: currentImageBase64,
         provider: selectedProvider,
@@ -195,9 +299,7 @@ aiAnalyzeBtn.onclick = async () => {
     });
 
     const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'AI 分析失敗');
-    }
+    handleAuthError(res, data);
 
     if (data.title) {
       titleInput.value = data.title;
@@ -246,11 +348,11 @@ createBtn.onclick = async () => {
   try {
     const res = await fetch('/api/polls', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ title, note, options, isMultiple, maxChoices })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '建立失敗');
+    handleAuthError(res, data);
 
     titleInput.value = '';
     noteInput.value = '';
@@ -302,12 +404,12 @@ saveNoteModalBtn.onclick = async () => {
     const newNote = modalNoteTextarea.value.trim();
     const res = await fetch(`/api/polls/${currentEditingShortCode}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ note: newNote })
     });
 
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || '備註更新失敗');
+    handleAuthError(res, data);
 
     closeEditNoteModal();
     await loadPolls();
@@ -394,20 +496,35 @@ async function loadPolls() {
   pollListEl.querySelectorAll('.deleteBtn').forEach(btn => {
     btn.onclick = async () => {
       if (!confirm('確定要刪除這個投票嗎？此動作無法復原。')) return;
-      await fetch(`/api/polls/${btn.dataset.code}`, { method: 'DELETE' });
-      loadPolls();
+      try {
+        const res = await fetch(`/api/polls/${btn.dataset.code}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders()
+        });
+        const data = await res.json().catch(() => ({}));
+        handleAuthError(res, data);
+        loadPolls();
+      } catch (err) {
+        alert(err.message);
+      }
     };
   });
 
   pollListEl.querySelectorAll('.toggleBtn').forEach(btn => {
     btn.onclick = async () => {
       const isActive = btn.dataset.active === 'true';
-      await fetch(`/api/polls/${btn.dataset.code}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ active: !isActive })
-      });
-      loadPolls();
+      try {
+        const res = await fetch(`/api/polls/${btn.dataset.code}`, {
+          method: 'PUT',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ active: !isActive })
+        });
+        const data = await res.json().catch(() => ({}));
+        handleAuthError(res, data);
+        loadPolls();
+      } catch (err) {
+        alert(err.message);
+      }
     };
   });
 
@@ -416,8 +533,12 @@ async function loadPolls() {
       btn.disabled = true;
       btn.textContent = '同步中...';
       try {
-        const res = await fetch(`/api/polls/${btn.dataset.code}/sync`, { method: 'POST' });
+        const res = await fetch(`/api/polls/${btn.dataset.code}/sync`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
         const data = await res.json();
+        handleAuthError(res, data);
         if (data.skipped) {
           alert('尚未設定 Google Sheets，請參考 README 完成設定。');
         } else {
@@ -443,5 +564,10 @@ async function loadPolls() {
   });
 }
 
+updateAuthStatusUI();
+if (!getAdminKey()) {
+  // 若未曾輸入過金鑰，在進入後台時自動引導提示輸入
+  setTimeout(openAuthModal, 300);
+}
 loadPolls();
 

@@ -22,9 +22,29 @@ function getBaseUrl(req) {
 app.use(express.json({ limit: '15mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ---------- 管理權限驗證中介軟體 ----------
+function requireAdminAuth(req, res, next) {
+  const configuredKey = process.env.ADMIN_API_KEY;
+  if (!configuredKey || !configuredKey.trim()) {
+    console.error('⚠️ 伺服器尚未設定 ADMIN_API_KEY 環境變數，拒絕所有管理操作以維護安全性');
+    return res.status(500).json({ error: '伺服器尚未設定管理授權金鑰 (ADMIN_API_KEY)，請聯絡管理員設定' });
+  }
+
+  const authHeader = req.headers.authorization || '';
+  const tokenFromBearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+  const tokenFromHeader = req.headers['x-admin-key'];
+  const providedKey = (tokenFromBearer || tokenFromHeader || '').trim();
+
+  if (!providedKey || providedKey !== configuredKey.trim()) {
+    return res.status(401).json({ error: '未授權的管理操作：管理金鑰無效或尚未提供' });
+  }
+
+  next();
+}
+
 // ---------- 管理 API ----------
 
-app.post('/api/polls', async (req, res) => {
+app.post('/api/polls', requireAdminAuth, async (req, res) => {
   const { title, options, isMultiple, maxChoices, note } = req.body;
 
   if (!title || !Array.isArray(options) || options.length < 2) {
@@ -53,79 +73,124 @@ app.post('/api/polls', async (req, res) => {
       createdAt: Date.now()
     });
 
+    const { voters, voteLog, ...safePoll } = poll;
     res.json({
-      ...poll,
+      ...safePoll,
       voteUrl: `${getBaseUrl(req)}/v/${shortCode}`
     });
   } catch (err) {
-    res.status(500).json({ error: '建立投票失敗：' + err.message });
+    console.error('建立投票失敗：', err);
+    res.status(500).json({ error: '建立投票失敗，請稍後再試' });
   }
 });
 
 app.get('/api/polls', async (req, res) => {
   try {
     const allPolls = await db.getAllPolls();
-    const polls = allPolls.map(p => ({
-      ...p,
-      voteUrl: `${getBaseUrl(req)}/v/${p.shortCode}`
-    }));
+    const polls = allPolls.map(p => {
+      // 排除敏感個資 voters 與投票日誌 voteLog
+      const { voters, voteLog, ...safePoll } = p;
+      return {
+        ...safePoll,
+        voteUrl: `${getBaseUrl(req)}/v/${p.shortCode}`
+      };
+    });
     res.json(polls);
   } catch (err) {
-    res.status(500).json({ error: '讀取投票列表失敗：' + err.message });
+    console.error('讀取投票列表失敗：', err);
+    res.status(500).json({ error: '讀取投票列表失敗，請稍後再試' });
   }
 });
 
 app.get('/api/polls/:shortCode', async (req, res) => {
-  const poll = await db.getPollByShortCode(req.params.shortCode);
-  if (!poll) return res.status(404).json({ error: '找不到這個投票' });
+  try {
+    const poll = await db.getPollByShortCode(req.params.shortCode);
+    if (!poll) return res.status(404).json({ error: '找不到這個投票' });
 
-  const voterId = req.query.voterId;
-  const userVotes = (poll.voters && voterId) ? (poll.voters[voterId] || null) : null;
+    const voterId = req.query.voterId;
+    const userVotes = (poll.voters && voterId) ? (poll.voters[voterId] || null) : null;
 
-  res.json({
-    ...poll,
-    userVotes,
-    voteUrl: `${getBaseUrl(req)}/v/${poll.shortCode}`
-  });
+    // 排除全員 voters 名單與完整 voteLog，僅回傳當前訪客個人的 userVotes
+    const { voters, voteLog, ...safePoll } = poll;
+
+    res.json({
+      ...safePoll,
+      userVotes,
+      voteUrl: `${getBaseUrl(req)}/v/${poll.shortCode}`
+    });
+  } catch (err) {
+    console.error('讀取投票詳情失敗：', err);
+    res.status(500).json({ error: '讀取投票失敗，請稍後再試' });
+  }
 });
 
-app.put('/api/polls/:shortCode', async (req, res) => {
-  const { title, options, active, isMultiple, maxChoices, note } = req.body;
-  const poll = await db.updatePoll(req.params.shortCode, { title, options, active, isMultiple, maxChoices, note });
-  if (!poll) return res.status(404).json({ error: '找不到這個投票' });
-  res.json(poll);
+app.put('/api/polls/:shortCode', requireAdminAuth, async (req, res) => {
+  try {
+    const { title, options, active, isMultiple, maxChoices, note } = req.body;
+    const poll = await db.updatePoll(req.params.shortCode, { title, options, active, isMultiple, maxChoices, note });
+    if (!poll) return res.status(404).json({ error: '找不到這個投票' });
+    const { voters, voteLog, ...safePoll } = poll;
+    res.json(safePoll);
+  } catch (err) {
+    console.error('更新投票失敗：', err);
+    res.status(500).json({ error: '更新投票失敗，請稍後再試' });
+  }
+});
+
+// 管理員專用端點：檢視投票詳細審計日誌與投票者對應（僅限授權管理員存取）
+app.get('/api/admin/polls/:shortCode/log', requireAdminAuth, async (req, res) => {
+  try {
+    const poll = await db.getPollByShortCode(req.params.shortCode);
+    if (!poll) return res.status(404).json({ error: '找不到這個投票' });
+    res.json({
+      shortCode: poll.shortCode,
+      title: poll.title,
+      voters: poll.voters || {},
+      voteLog: poll.voteLog || []
+    });
+  } catch (err) {
+    console.error('讀取投票日誌失敗：', err);
+    res.status(500).json({ error: '讀取投票日誌失敗，請稍後再試' });
+  }
 });
 
 // ---------- AI 輔助建立 API ----------
 
-app.post('/api/ai/extract-poll', async (req, res) => {
+app.post('/api/ai/extract-poll', requireAdminAuth, async (req, res) => {
   const { image, provider, prompt } = req.body;
   try {
     const result = await ai.extractPollFromImage({ image, provider, prompt });
     res.json(result);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    console.error('AI 圖片分析失敗：', err.message);
+    res.status(400).json({ error: err.message || 'AI 分析圖片失敗，請稍後再試' });
   }
 });
 
-app.delete('/api/polls/:shortCode', async (req, res) => {
-  const ok = await db.deletePoll(req.params.shortCode);
-  if (!ok) return res.status(404).json({ error: '找不到這個投票' });
-  res.json({ success: true });
+app.delete('/api/polls/:shortCode', requireAdminAuth, async (req, res) => {
+  try {
+    const ok = await db.deletePoll(req.params.shortCode);
+    if (!ok) return res.status(404).json({ error: '找不到這個投票' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('刪除投票失敗：', err);
+    res.status(500).json({ error: '刪除投票失敗，請稍後再試' });
+  }
 });
 
-app.post('/api/polls/:shortCode/sync', async (req, res) => {
-  const poll = await db.getPollByShortCode(req.params.shortCode);
-  if (!poll) return res.status(404).json({ error: '找不到這個投票' });
-
+app.post('/api/polls/:shortCode/sync', requireAdminAuth, async (req, res) => {
   try {
+    const poll = await db.getPollByShortCode(req.params.shortCode);
+    if (!poll) return res.status(404).json({ error: '找不到這個投票' });
+
     const result = await sheets.syncResultsSummary({
       pollTitle: poll.title,
       options: poll.options
     });
     res.json(result);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('同步 Google Sheet 失敗：', err);
+    res.status(500).json({ error: '同步至 Google Sheet 失敗，請稍後再試或檢查設定' });
   }
 });
 

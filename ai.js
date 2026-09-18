@@ -106,7 +106,7 @@ async function extractWithGemini(mimeType, base64Data, promptText) {
   }
 
   const model = 'gemini-3.6-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const requestBody = {
     contents: [
@@ -132,7 +132,10 @@ async function extractWithGemini(mimeType, base64Data, promptText) {
   try {
     res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey.trim()
+      },
       body: JSON.stringify(requestBody),
       signal: AbortSignal.timeout(35000)
     });

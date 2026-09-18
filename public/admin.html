@@ -8,8 +8,12 @@
 </head>
 <body>
   <div class="container">
-    <div style="margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+    <div style="margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
       <a href="/" style="text-decoration: none; font-size: 13px; font-weight: 600; color: #4f46e5;">← 回到系統首頁</a>
+      <div id="adminAuthStatusArea" style="display: flex; align-items: center; gap: 8px;">
+        <span id="adminAuthBadge" style="font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 9999px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">🔒 未解鎖</span>
+        <button type="button" id="adminAuthToggleBtn" class="btn-secondary" style="font-size: 12px; padding: 4px 10px;">輸入金鑰</button>
+      </div>
     </div>
     <h1>📊 投票管理後台</h1>
     <p class="subtitle">建立投票主題與選項，產生短連結分享出去</p>
@@ -127,6 +131,30 @@
       <div class="modal-actions">
         <button type="button" class="btn-secondary" id="cancelNoteModalBtn">取消</button>
         <button type="button" class="btn-primary" id="saveNoteModalBtn">儲存備註</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理金鑰認證彈窗 -->
+  <div class="modal-overlay" id="authModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">🔐 管理者權限驗證</div>
+        <button type="button" class="btn-secondary" id="closeAuthModalBtn" style="padding: 4px 8px; font-size: 12px;">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted); margin-top: 0; margin-bottom: 12px;">
+        本後台執行建立、編輯、刪除投票及 AI 辨識功能需驗證管理金鑰。
+      </p>
+      <label for="adminKeyInput" style="margin-top:0;">請輸入管理者金鑰 (ADMIN_API_KEY)：</label>
+      <input type="password" id="adminKeyInput" placeholder="請輸入設定於 .env 的 ADMIN_API_KEY" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 14px; margin-bottom: 8px;" />
+      
+      <div style="font-size: 12px; color: #b45309; background: #fffbeb; border: 1px solid #fef3c7; padding: 10px 12px; border-radius: 6px; margin-bottom: 16px; line-height: 1.5;">
+        ⚠️ <strong>安全提醒：</strong>管理金鑰將暫存於此瀏覽器中以避免頻繁輸入；<strong>請勿在公用或他人電腦上保持登入狀態</strong>，離開前請點擊「鎖定 / 登出後台」。
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelAuthModalBtn">取消</button>
+        <button type="button" class="btn-primary" id="saveAuthModalBtn">確認解鎖</button>
       </div>
     </div>
   </div>
