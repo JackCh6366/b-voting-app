@@ -13,3 +13,4 @@ npm-debug.log*
 
 # 執行期資料（視你的需求決定要不要排除；若想保留投票紀錄可以移除這行）
 # data/polls.json
+.vercel
