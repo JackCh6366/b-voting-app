@@ -8,11 +8,15 @@
 </head>
 <body>
   <div class="container">
-    <div style="margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-      <a href="/" style="text-decoration: none; font-size: 13px; font-weight: 600; color: #4f46e5;">← 回到系統首頁</a>
-      <div id="adminAuthStatusArea" style="display: flex; align-items: center; gap: 8px;">
-        <span id="adminAuthBadge" style="font-size: 12px; font-weight: 500; padding: 4px 10px; border-radius: 9999px; background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;">🔒 未解鎖</span>
-        <button type="button" id="adminAuthToggleBtn" class="btn-secondary" style="font-size: 12px; padding: 4px 10px;">輸入金鑰</button>
+    <div class="admin-topbar">
+      <a href="/" class="back-link">← 回到系統首頁</a>
+      <div id="adminAuthStatusArea" class="auth-status-area">
+        <!-- 系統安全防護開關 -->
+        <span id="systemLockBadge" class="badge-lock">載入中...</span>
+        <button type="button" id="toggleSystemLockBtn" class="btn-secondary btn-sm">切換安全鎖</button>
+        <!-- 管理者金鑰登入/登出按鈕（當安全鎖開啟時顯示） -->
+        <span id="adminAuthBadge" class="badge-key" style="display:none;">🔒 未解鎖</span>
+        <button type="button" id="adminAuthToggleBtn" class="btn-secondary btn-sm" style="display:none;">🔑 輸入金鑰</button>
       </div>
     </div>
     <h1>📊 投票管理後台</h1>

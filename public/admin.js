@@ -43,6 +43,14 @@ const cancelAuthModalBtn = document.getElementById('cancelAuthModalBtn');
 const saveAuthModalBtn = document.getElementById('saveAuthModalBtn');
 const adminAuthBadge = document.getElementById('adminAuthBadge');
 const adminAuthToggleBtn = document.getElementById('adminAuthToggleBtn');
+const systemLockBadge = document.getElementById('systemLockBadge');
+const toggleSystemLockBtn = document.getElementById('toggleSystemLockBtn');
+
+let currentSystemConfig = {
+  adminAuthEnabled: false,
+  isForced: false,
+  hasAdminKeyConfigured: false
+};
 
 function getAdminKey() {
   return localStorage.getItem('bv_admin_key') || '';
@@ -62,22 +70,132 @@ function clearAdminKey() {
   updateAuthStatusUI();
 }
 
+// 載入系統安全鎖配置
+async function loadSystemConfig() {
+  try {
+    const res = await fetch('/api/admin/config');
+    if (res.ok) {
+      currentSystemConfig = await res.json();
+    }
+  } catch (err) {
+    console.warn('載入系統安全設定失敗：', err);
+  }
+  updateAuthStatusUI();
+}
+
 function updateAuthStatusUI() {
+  const isEnabled = currentSystemConfig.adminAuthEnabled;
+  const isForced = currentSystemConfig.isForced;
   const key = getAdminKey();
-  if (key) {
-    adminAuthBadge.textContent = '🟢 已解鎖';
-    adminAuthBadge.style.background = '#ecfdf5';
-    adminAuthBadge.style.color = '#065f46';
-    adminAuthBadge.style.borderColor = '#a7f3d0';
-    adminAuthToggleBtn.textContent = '🔒 鎖定 / 登出';
+
+  // 更新系統安全開關徽章與按鈕
+  if (isEnabled) {
+    systemLockBadge.textContent = isForced ? '🛡️ 安全鎖：強制開啟 (環境變數)' : '🛡️ 安全鎖：已開啟（需金鑰）';
+    systemLockBadge.className = 'badge-lock lock-on';
+    toggleSystemLockBtn.textContent = '🔓 關閉安全鎖';
+    toggleSystemLockBtn.disabled = isForced;
+    toggleSystemLockBtn.title = isForced ? '目前由環境變數強制鎖定，無法手動關閉' : '點擊以驗證金鑰並解除安全鎖';
+
+    // 顯示金鑰狀態
+    adminAuthBadge.style.display = 'inline-flex';
+    adminAuthToggleBtn.style.display = 'inline-flex';
+
+    if (key) {
+      adminAuthBadge.textContent = '🟢 已解鎖';
+      adminAuthBadge.className = 'badge-key key-unlocked';
+      adminAuthToggleBtn.textContent = '🔒 鎖定 / 登出';
+    } else {
+      adminAuthBadge.textContent = '🔒 未解鎖';
+      adminAuthBadge.className = 'badge-key key-locked';
+      adminAuthToggleBtn.textContent = '🔑 輸入金鑰';
+    }
   } else {
-    adminAuthBadge.textContent = '🔒 未解鎖';
-    adminAuthBadge.style.background = '#fef2f2';
-    adminAuthBadge.style.color = '#991b1b';
-    adminAuthBadge.style.borderColor = '#fecaca';
-    adminAuthToggleBtn.textContent = '🔑 輸入金鑰';
+    systemLockBadge.textContent = '🟢 安全鎖：已關閉（自由管理模式）';
+    systemLockBadge.className = 'badge-lock lock-off';
+    toggleSystemLockBtn.textContent = '🔒 啟用安全鎖';
+    toggleSystemLockBtn.disabled = false;
+    toggleSystemLockBtn.title = '點擊立即啟用安全防護（建立、修改、刪除需金鑰）';
+
+    // 關閉狀態時隱藏個別金鑰狀態，避免介面繁瑣
+    adminAuthBadge.style.display = 'none';
+    adminAuthToggleBtn.style.display = 'none';
   }
 }
+
+// 切換安全鎖開關
+async function toggleSystemLock() {
+  const willEnable = !currentSystemConfig.adminAuthEnabled;
+
+  if (willEnable) {
+    // 關閉 ➔ 開啟：提示後直接開啟
+    if (!confirm('確定要啟用管理安全鎖嗎？\n\n啟用後，所有管理操作（建立、修改、刪除、同步、AI 辨識）都必須驗證管理者金鑰 (ADMIN_API_KEY)。\n「查看投票結果」將依然維持公開不受影響。')) {
+      return;
+    }
+
+    try {
+      toggleSystemLockBtn.disabled = true;
+      const res = await fetch('/api/admin/config', {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ adminAuthEnabled: true })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || '啟用安全鎖失敗');
+
+      currentSystemConfig = data;
+      updateAuthStatusUI();
+      alert('🛡️ 管理安全鎖已成功啟用！\n若尚未在瀏覽器輸入金鑰，請點選「輸入金鑰」以解鎖管理操作。');
+
+      if (!getAdminKey()) {
+        openAuthModal();
+      }
+    } catch (err) {
+      alert(`操作失敗：${err.message}`);
+    } finally {
+      toggleSystemLockBtn.disabled = false;
+    }
+  } else {
+    // 開啟 ➔ 關閉：需驗證金鑰
+    let key = getAdminKey();
+    if (!key) {
+      alert('關閉安全鎖需要驗證管理者金鑰，請先輸入金鑰！');
+      openAuthModal();
+      return;
+    }
+
+    if (!confirm('確定要關閉管理安全鎖嗎？\n\n關閉後，任何人造訪後台均可直接執行建立、編輯與刪除操作。\n你可以隨時再次開啟安全鎖。')) {
+      return;
+    }
+
+    try {
+      toggleSystemLockBtn.disabled = true;
+      const res = await fetch('/api/admin/config', {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ adminAuthEnabled: false })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (res.status === 401) {
+          clearAdminKey();
+          openAuthModal();
+          throw new Error('金鑰無效！請重新輸入正確金鑰後再嘗試關閉。');
+        }
+        throw new Error(data.error || '關閉安全鎖失敗');
+      }
+
+      currentSystemConfig = data;
+      updateAuthStatusUI();
+      alert('🟢 安全鎖已成功關閉，目前已切換為自由管理模式。');
+    } catch (err) {
+      alert(`操作失敗：${err.message}`);
+    } finally {
+      toggleSystemLockBtn.disabled = false;
+    }
+  }
+}
+
+toggleSystemLockBtn.onclick = toggleSystemLock;
 
 function openAuthModal() {
   adminKeyInput.value = getAdminKey();
@@ -132,7 +250,7 @@ function handleAuthError(res, data) {
   if (res.status === 401) {
     clearAdminKey();
     openAuthModal();
-    throw new Error('未授權：管理金鑰無效或尚未提供，請重新輸入正確金鑰！');
+    throw new Error('未授權：安全鎖已啟用，請輸入正確的管理者金鑰後重試！');
   }
   if (!res.ok) {
     throw new Error((data && data.error) || `操作失敗 (HTTP ${res.status})`);
@@ -564,10 +682,14 @@ async function loadPolls() {
   });
 }
 
-updateAuthStatusUI();
-if (!getAdminKey()) {
-  // 若未曾輸入過金鑰，在進入後台時自動引導提示輸入
-  setTimeout(openAuthModal, 300);
+async function initAdminPage() {
+  await loadSystemConfig();
+  await loadPolls();
+  // 只有在系統安全鎖「已啟用」且瀏覽器尚未輸入金鑰時，才主動引導輸入金鑰
+  if (currentSystemConfig.adminAuthEnabled && !getAdminKey()) {
+    setTimeout(openAuthModal, 300);
+  }
 }
-loadPolls();
+
+initAdminPage();
 

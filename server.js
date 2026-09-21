@@ -23,24 +23,80 @@ app.use(express.json({ limit: '15mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ---------- 管理權限驗證中介軟體 ----------
-function requireAdminAuth(req, res, next) {
-  const configuredKey = process.env.ADMIN_API_KEY;
-  if (!configuredKey || !configuredKey.trim()) {
-    console.error('⚠️ 伺服器尚未設定 ADMIN_API_KEY 環境變數，拒絕所有管理操作以維護安全性');
-    return res.status(500).json({ error: '伺服器尚未設定管理授權金鑰 (ADMIN_API_KEY)，請聯絡管理員設定' });
+async function requireAdminAuth(req, res, next) {
+  try {
+    const config = await db.getSystemConfig();
+    // 若安全開關為「關閉」狀態（預設），直接放行管理操作
+    if (!config.adminAuthEnabled) {
+      return next();
+    }
+
+    // 若安全開關為「開啟」狀態，強制驗證 ADMIN_API_KEY
+    const configuredKey = process.env.ADMIN_API_KEY;
+    if (!configuredKey || !configuredKey.trim()) {
+      console.error('⚠️ 安全鎖已啟用，但伺服器尚未設定 ADMIN_API_KEY 環境變數');
+      return res.status(500).json({ error: '安全鎖已啟用，但伺服器尚未設定管理授權金鑰 (ADMIN_API_KEY)，請聯絡管理員設定' });
+    }
+
+    const authHeader = req.headers.authorization || '';
+    const tokenFromBearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+    const tokenFromHeader = req.headers['x-admin-key'];
+    const providedKey = (tokenFromBearer || tokenFromHeader || '').trim();
+
+    if (!providedKey || providedKey !== configuredKey.trim()) {
+      return res.status(401).json({ error: '未授權的管理操作：管理金鑰無效或尚未提供' });
+    }
+
+    next();
+  } catch (err) {
+    console.error('安全權限檢查失敗：', err);
+    res.status(500).json({ error: '安全權限檢查失敗' });
   }
-
-  const authHeader = req.headers.authorization || '';
-  const tokenFromBearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
-  const tokenFromHeader = req.headers['x-admin-key'];
-  const providedKey = (tokenFromBearer || tokenFromHeader || '').trim();
-
-  if (!providedKey || providedKey !== configuredKey.trim()) {
-    return res.status(401).json({ error: '未授權的管理操作：管理金鑰無效或尚未提供' });
-  }
-
-  next();
 }
+
+// ---------- 管理系統設定 API ----------
+
+// 讀取當前安全鎖狀態（公開讀取，供後台顯示當前狀態）
+app.get('/api/admin/config', async (req, res) => {
+  try {
+    const config = await db.getSystemConfig();
+    res.json(config);
+  } catch (err) {
+    console.error('讀取系統設定失敗：', err);
+    res.status(500).json({ error: '讀取系統設定失敗' });
+  }
+});
+
+// 切換安全鎖開關
+app.post('/api/admin/config', async (req, res) => {
+  try {
+    const { adminAuthEnabled } = req.body;
+    const current = await db.getSystemConfig();
+
+    if (current.isForced) {
+      return res.status(400).json({ error: '系統已由環境變數 ADMIN_AUTH_FORCE 強制鎖定，無法變更' });
+    }
+
+    // 若欲由「開啟」切換為「關閉」（解除防護），必須驗證 ADMIN_API_KEY
+    if (current.adminAuthEnabled && adminAuthEnabled === false) {
+      const configuredKey = process.env.ADMIN_API_KEY;
+      const authHeader = req.headers.authorization || '';
+      const tokenFromBearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+      const tokenFromHeader = req.headers['x-admin-key'];
+      const providedKey = (tokenFromBearer || tokenFromHeader || '').trim();
+
+      if (!configuredKey || !configuredKey.trim() || !providedKey || providedKey !== configuredKey.trim()) {
+        return res.status(401).json({ error: '關閉安全鎖需要驗證管理者金鑰，請提供正確金鑰！' });
+      }
+    }
+
+    const updated = await db.setSystemConfig({ adminAuthEnabled });
+    res.json(updated);
+  } catch (err) {
+    console.error('更新系統設定失敗：', err);
+    res.status(400).json({ error: err.message || '更新系統設定失敗' });
+  }
+});
 
 // ---------- 管理 API ----------
 

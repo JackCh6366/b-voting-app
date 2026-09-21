@@ -233,6 +233,57 @@ async function deletePoll(shortCode) {
   return true;
 }
 
+// 系統全域設定（例如：管理安全鎖）
+const CONFIG_KEY = 'system:config';
+
+async function getSystemConfig() {
+  const force = process.env.ADMIN_AUTH_FORCE === 'true';
+  let adminAuthEnabled = false;
+
+  if (useKV && kv) {
+    try {
+      const config = await kv.get(CONFIG_KEY);
+      if (config && typeof config.adminAuthEnabled === 'boolean') {
+        adminAuthEnabled = config.adminAuthEnabled;
+      }
+    } catch (e) {
+      console.warn('讀取 KV 設定失敗，使用預設值：', e.message);
+    }
+  } else {
+    const data = readLocalDb();
+    if (data.systemConfig && typeof data.systemConfig.adminAuthEnabled === 'boolean') {
+      adminAuthEnabled = data.systemConfig.adminAuthEnabled;
+    }
+  }
+
+  return {
+    adminAuthEnabled: force ? true : adminAuthEnabled,
+    isForced: force,
+    hasAdminKeyConfigured: Boolean(process.env.ADMIN_API_KEY && process.env.ADMIN_API_KEY.trim())
+  };
+}
+
+async function setSystemConfig(newConfig) {
+  const current = await getSystemConfig();
+  if (current.isForced) {
+    throw new Error('系統目前由環境變數 ADMIN_AUTH_FORCE 強制鎖定，無法透過介面修改');
+  }
+
+  const updated = {
+    adminAuthEnabled: Boolean(newConfig.adminAuthEnabled)
+  };
+
+  if (useKV && kv) {
+    await kv.set(CONFIG_KEY, updated);
+  } else {
+    const data = readLocalDb();
+    data.systemConfig = updated;
+    writeLocalDb(data);
+  }
+
+  return getSystemConfig();
+}
+
 module.exports = {
   createPoll,
   getPollByShortCode,
@@ -240,5 +291,7 @@ module.exports = {
   updatePoll,
   submitVote,
   addVote,
-  deletePoll
+  deletePoll,
+  getSystemConfig,
+  setSystemConfig
 };
