@@ -101,7 +101,7 @@ app.post('/api/admin/config', async (req, res) => {
 // ---------- 管理 API ----------
 
 app.post('/api/polls', requireAdminAuth, async (req, res) => {
-  const { title, options, isMultiple, maxChoices, note } = req.body;
+  const { title, options, isMultiple, maxChoices, note, allowCustomOption, customOptionMaxLength } = req.body;
 
   if (!title || !Array.isArray(options) || options.length < 2) {
     return res.status(400).json({ error: '請提供投票主題，以及至少兩個選項' });
@@ -126,6 +126,8 @@ app.post('/api/polls', requireAdminAuth, async (req, res) => {
       options,
       isMultiple: multiple,
       maxChoices: limit,
+      allowCustomOption: Boolean(allowCustomOption),
+      customOptionMaxLength: Number(customOptionMaxLength) || 40,
       createdAt: Date.now()
     });
 
@@ -182,8 +184,8 @@ app.get('/api/polls/:shortCode', async (req, res) => {
 
 app.put('/api/polls/:shortCode', requireAdminAuth, async (req, res) => {
   try {
-    const { title, options, active, isMultiple, maxChoices, note } = req.body;
-    const poll = await db.updatePoll(req.params.shortCode, { title, options, active, isMultiple, maxChoices, note });
+    const { title, options, active, isMultiple, maxChoices, note, allowCustomOption, customOptionMaxLength } = req.body;
+    const poll = await db.updatePoll(req.params.shortCode, { title, options, active, isMultiple, maxChoices, note, allowCustomOption, customOptionMaxLength });
     if (!poll) return res.status(404).json({ error: '找不到這個投票' });
     const { voters, voteLog, ...safePoll } = poll;
     res.json(safePoll);
@@ -261,7 +263,7 @@ app.get('/v/:shortCode', async (req, res) => {
 });
 
 app.post('/api/polls/:shortCode/vote', async (req, res) => {
-  const { optionIndices, optionIndex } = req.body;
+  const { optionIndices, optionIndex, customText } = req.body;
   let voterId = req.body.voterId;
   const voterName = (req.body.voterName || '').toString().trim().slice(0, 20);
 
@@ -288,14 +290,19 @@ app.post('/api/polls/:shortCode/vote', async (req, res) => {
     return res.status(400).json({ error: `本投票最多只能選擇 ${limit} 項` });
   }
 
-  const voteResult = await db.submitVote(req.params.shortCode, { voterId, optionIndices: selected });
+  const voteResult = await db.submitVote(req.params.shortCode, { voterId, optionIndices: selected, customText });
   if (voteResult.error) {
     return res.status(400).json({ error: voteResult.error });
   }
 
   const updated = voteResult.poll;
-  const chosenTexts = selected
-    .map(idx => updated.options.find(o => o.index === idx)?.text)
+  const finalVotes = voteResult.userVotes || selected;
+  const chosenTexts = finalVotes
+    .map(idx => {
+      const opt = updated.options.find(o => o.index === idx);
+      if (!opt) return null;
+      return opt.isCustom ? `${opt.text} (自填)` : opt.text;
+    })
     .filter(Boolean);
 
   const prefix = voteResult.isChange ? '【更換選項】' : '';
@@ -311,7 +318,7 @@ app.post('/api/polls/:shortCode/vote', async (req, res) => {
   res.json({
     success: true,
     results: updated.options,
-    userVotes: selected,
+    userVotes: finalVotes,
     voterId,
     isChange: voteResult.isChange
   });

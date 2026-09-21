@@ -47,16 +47,25 @@ function writeLocalDb(data) {
   fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2));
 }
 
+// 文字標準化工具函式（去除頭尾空格、縮減連續空格）
+function normalizeOptionText(str) {
+  if (!str || typeof str !== 'string') return '';
+  return str.trim().replace(/\s+/g, ' ');
+}
+
 // 建立一筆新投票
-async function createPoll({ id, shortCode, title, options, isMultiple = false, maxChoices = 1, createdAt, note = '' }) {
+async function createPoll({ id, shortCode, title, options, isMultiple = false, maxChoices = 1, createdAt, note = '', allowCustomOption = false, customOptionMaxLength = 40 }) {
+  const maxLen = Math.max(5, Math.min(200, Number(customOptionMaxLength) || 40));
   const poll = {
     id,
     shortCode,
     title,
     note: typeof note === 'string' ? note.trim() : '',
-    options: options.map((text, idx) => ({ index: idx, text, votes: 0 })),
+    options: options.map((text, idx) => ({ index: idx, text, votes: 0, isCustom: false })),
     isMultiple: Boolean(isMultiple),
     maxChoices: isMultiple ? Math.max(2, Math.min(options.length, Number(maxChoices) || 2)) : 1,
+    allowCustomOption: Boolean(allowCustomOption),
+    customOptionMaxLength: maxLen,
     createdAt: createdAt || Date.now(),
     active: true,
     voteLog: [],
@@ -100,7 +109,7 @@ async function getAllPolls() {
 }
 
 // 更新投票資訊
-async function updatePoll(shortCode, { title, options, active, isMultiple, maxChoices, note }) {
+async function updatePoll(shortCode, { title, options, active, isMultiple, maxChoices, note, allowCustomOption, customOptionMaxLength }) {
   const poll = await getPollByShortCode(shortCode);
   if (!poll) return null;
 
@@ -108,6 +117,10 @@ async function updatePoll(shortCode, { title, options, active, isMultiple, maxCh
   if (note !== undefined) poll.note = typeof note === 'string' ? note.trim() : '';
   if (active !== undefined) poll.active = active;
   if (isMultiple !== undefined) poll.isMultiple = Boolean(isMultiple);
+  if (allowCustomOption !== undefined) poll.allowCustomOption = Boolean(allowCustomOption);
+  if (customOptionMaxLength !== undefined) {
+    poll.customOptionMaxLength = Math.max(5, Math.min(200, Number(customOptionMaxLength) || 40));
+  }
   if (maxChoices !== undefined) {
     const optCount = options ? options.length : poll.options.length;
     poll.maxChoices = poll.isMultiple ? Math.max(2, Math.min(optCount, Number(maxChoices) || 2)) : 1;
@@ -118,7 +131,8 @@ async function updatePoll(shortCode, { title, options, active, isMultiple, maxCh
     poll.options = options.map((text, idx) => ({
       index: idx,
       text,
-      votes: oldByText[text] || 0
+      votes: oldByText[text] || 0,
+      isCustom: Boolean(poll.options.find(o => o.index === idx && o.isCustom))
     }));
   }
 
@@ -136,7 +150,7 @@ async function updatePoll(shortCode, { title, options, active, isMultiple, maxCh
 }
 
 // 提交投票或更換選項（核心函式）
-async function submitVote(shortCode, { voterId, optionIndices }) {
+async function submitVote(shortCode, { voterId, optionIndices, customText }) {
   const poll = await getPollByShortCode(shortCode);
   if (!poll) return { error: '找不到這個投票' };
   if (!poll.active) return { error: '這個投票已經結束，無法進行投票或更換選項' };
@@ -145,20 +159,68 @@ async function submitVote(shortCode, { voterId, optionIndices }) {
     return { error: '請至少選擇一個選項' };
   }
 
-  // 驗證複選上限
-  const limit = poll.isMultiple ? (poll.maxChoices || 2) : 1;
-  if (optionIndices.length > limit) {
-    return { error: `最多只能選擇 ${limit} 個選項` };
+  let finalOptionIndices = [...optionIndices];
+
+  // 處理自填選項邏輯
+  const cleanCustomText = normalizeOptionText(customText);
+  const hasCustomFlag = finalOptionIndices.includes(-1);
+
+  if (hasCustomFlag || cleanCustomText) {
+    if (!poll.allowCustomOption) {
+      return { error: '本投票尚未開啟自訂選項功能' };
+    }
+    if (!cleanCustomText) {
+      return { error: '請輸入你的自訂選項內容' };
+    }
+    const maxLen = poll.customOptionMaxLength || 40;
+    if (cleanCustomText.length > maxLen) {
+      return { error: `自訂選項內容不能超過 ${maxLen} 個字（目前為 ${cleanCustomText.length} 字）` };
+    }
+
+    // 依「標準化後的字串（去除連續空白、忽略大小寫）」尋找是否已有相同的自訂選項
+    let existingOption = poll.options.find(
+      o => o.isCustom && normalizeOptionText(o.text).toLowerCase() === cleanCustomText.toLowerCase()
+    );
+
+    let customIndex;
+    if (existingOption) {
+      customIndex = existingOption.index;
+    } else {
+      // 動態建立新的自訂選項
+      const nextIdx = poll.options.length > 0 ? Math.max(...poll.options.map(o => o.index)) + 1 : 0;
+      const newOption = {
+        index: nextIdx,
+        text: cleanCustomText,
+        votes: 0,
+        isCustom: true
+      };
+      poll.options.push(newOption);
+      customIndex = nextIdx;
+    }
+
+    // 將虛擬的 -1 替換為實際的 customIndex
+    if (hasCustomFlag) {
+      finalOptionIndices = finalOptionIndices.map(idx => idx === -1 ? customIndex : idx);
+    } else if (!finalOptionIndices.includes(customIndex)) {
+      finalOptionIndices.push(customIndex);
+    }
   }
 
-  // 確保選項索引有效且無重複
-  const uniqueIndices = [...new Set(optionIndices)];
-  if (uniqueIndices.length !== optionIndices.length) {
+  // 確保選項索引無重複
+  const uniqueIndices = [...new Set(finalOptionIndices)];
+  if (uniqueIndices.length !== finalOptionIndices.length) {
     return { error: '不能重複選擇相同選項' };
   }
 
+  // 驗證複選上限
+  const limit = poll.isMultiple ? (poll.maxChoices || 2) : 1;
+  if (uniqueIndices.length > limit) {
+    return { error: `最多只能選擇 ${limit} 個選項` };
+  }
+
+  // 驗證所有選項編號皆存在於選項列表中
   for (const idx of uniqueIndices) {
-    if (idx < 0 || idx >= poll.options.length) {
+    if (idx < 0 || !poll.options.some(o => o.index === idx)) {
       return { error: `無效的選項編號: ${idx}` };
     }
   }
@@ -196,6 +258,7 @@ async function submitVote(shortCode, { voterId, optionIndices }) {
     voterId,
     previousIndices,
     newIndices: uniqueIndices,
+    customText: cleanCustomText || null,
     isChange
   });
 
@@ -207,7 +270,7 @@ async function submitVote(shortCode, { voterId, optionIndices }) {
     writeLocalDb(data);
   }
 
-  return { poll, isChange };
+  return { poll, isChange, userVotes: uniqueIndices };
 }
 
 // 舊版單選相容函式

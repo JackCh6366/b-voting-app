@@ -67,9 +67,54 @@ async function loadPoll() {
 function renderVoteForm(poll, preSelected = [], isEditing = false) {
   const isMulti = Boolean(poll.isMultiple);
   const maxLimit = isMulti ? (poll.maxChoices || 2) : 1;
-  let selected = new Set(preSelected);
+  const allowCustom = Boolean(poll.allowCustomOption);
+  const customMaxLength = poll.customOptionMaxLength || 40;
 
+  // 處理自訂選項回填（更換選項時若先前投了自訂選項，回填其文字）
+  let initialCustomText = '';
+  let normalizedPreSelected = [];
+  for (const idx of preSelected) {
+    const opt = poll.options.find(o => o.index === idx);
+    if (opt && opt.isCustom) {
+      initialCustomText = opt.text;
+      normalizedPreSelected.push(-1);
+    } else {
+      normalizedPreSelected.push(idx);
+    }
+  }
+
+  let selected = new Set(normalizedPreSelected);
   const modeBadgeText = isMulti ? `複選 · 最多 ${maxLimit} 票` : '單選 · 限選 1 項';
+
+  // 渲染固定選項清單（過濾掉動態自訂選項，讓自訂選項由專屬其他按鈕統一代入）
+  const fixedOptions = poll.options.filter(o => !o.isCustom);
+
+  const customOptionHtml = allowCustom ? `
+    <div class="option-vote ${selected.has(-1) ? 'selected' : ''}" data-index="-1" id="customOptionBtn">
+      <div class="option-vote-left">
+        <div class="custom-indicator ${isMulti ? 'checkbox' : ''}"></div>
+        <span>✍️ 其他（請自行填寫）</span>
+      </div>
+      ${selected.has(-1) ? '<span class="status-tag" style="font-size:12px; color:var(--primary); font-weight:600;">已選取</span>' : ''}
+    </div>
+    <div id="customInputBox" style="display:${selected.has(-1) ? 'block' : 'none'}; margin-top:-2px; margin-bottom:14px; padding:14px 16px; background:#fdf4ff; border:1.5px solid #f0abfc; border-radius:var(--radius-md);">
+      <label for="customTextInput" style="margin-top:0; margin-bottom:6px; font-size:13px; font-weight:600; color:#86198f;">
+        請輸入你的自訂回答內容：
+      </label>
+      <input
+        type="text"
+        id="customTextInput"
+        maxlength="${customMaxLength}"
+        value="${escapeHtml(initialCustomText)}"
+        placeholder="請輸入你的自訂選項（純文字）..."
+        style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid #d8b4fe; border-radius: 8px; font-size: 14px; outline: none; background: #fff;"
+      />
+      <div style="display:flex; justify-content:space-between; font-size:11.5px; color:#a21caf; margin-top:5px;">
+        <span>僅接受純文字，將列入公開計票</span>
+        <span>還可輸入 <strong id="customCharRemaining">${customMaxLength - initialCustomText.length}</strong> 字</span>
+      </div>
+    </div>
+  ` : '';
 
   pollCard.innerHTML = `
     <div class="poll-mode-header">
@@ -89,7 +134,7 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
     <p class="subtitle">${isEditing ? '請修改你的選項並點選「更新我的投票」' : (isMulti ? `請勾選你支持的選項（最多可選 ${maxLimit} 項）：` : '請點選你支持的選項：')}</p>
 
     <div id="optionsArea">
-      ${poll.options.map(o => {
+      ${fixedOptions.map(o => {
         const checked = selected.has(o.index);
         return `
           <div class="option-vote ${checked ? 'selected' : ''}" data-index="${o.index}">
@@ -97,10 +142,11 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
               <div class="custom-indicator ${isMulti ? 'checkbox' : ''}"></div>
               <span>${escapeHtml(o.text)}</span>
             </div>
-            ${checked ? '<span style="font-size:12px; color:var(--primary); font-weight:600;">已選取</span>' : ''}
+            ${checked ? '<span class="status-tag" style="font-size:12px; color:var(--primary); font-weight:600;">已選取</span>' : ''}
           </div>
         `;
       }).join('')}
+      ${customOptionHtml}
     </div>
 
     <div style="margin-top: 20px;">
@@ -134,6 +180,9 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
   const submitBtn = document.getElementById('submitVoteBtn');
   const counterText = document.getElementById('counterText');
   const voterNameInput = document.getElementById('voterNameInput');
+  const customInputBox = document.getElementById('customInputBox');
+  const customTextInput = document.getElementById('customTextInput');
+  const customCharRemaining = document.getElementById('customCharRemaining');
 
   function updateUI() {
     pollCard.querySelectorAll('.option-vote').forEach(el => {
@@ -142,15 +191,27 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
       el.classList.toggle('selected', isChecked);
     });
 
+    if (customInputBox) {
+      customInputBox.style.display = selected.has(-1) ? 'block' : 'none';
+    }
+
     if (isMulti) {
       counterText.textContent = `已選 ${selected.size} / ${maxLimit} 票`;
       counterText.classList.toggle('full', selected.size === maxLimit);
     }
-    // 按鈕：需同時有選項 且 已填暱稱
-    submitBtn.disabled = selected.size === 0 || voterNameInput.value.trim() === '';
+
+    // 驗證自訂選項字數與填寫
+    let customValid = true;
+    if (selected.has(-1)) {
+      const val = customTextInput ? customTextInput.value.trim() : '';
+      customValid = val.length > 0 && val.length <= customMaxLength;
+    }
+
+    // 按鈕：需同時有選項 且 已填暱稱 且（若選了自訂選項）自訂內容有效
+    submitBtn.disabled = selected.size === 0 || voterNameInput.value.trim() === '' || !customValid;
   }
 
-  // 暱稱輸入即時驗證：有填字才解鎖按鈕；同時更新字數計數
+  // 暱稱輸入即時驗證
   voterNameInput.addEventListener('input', () => {
     document.getElementById('nameCount').textContent = voterNameInput.value.length;
     updateUI();
@@ -158,6 +219,20 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
   voterNameInput.addEventListener('focus', () => { voterNameInput.style.borderColor = '#6366f1'; });
   voterNameInput.addEventListener('blur', () => { voterNameInput.style.borderColor = '#d1d5db'; });
 
+  // 自訂輸入框字數與驗證監聽
+  if (customTextInput) {
+    customTextInput.addEventListener('input', () => {
+      const currentLen = customTextInput.value.length;
+      const remaining = Math.max(0, customMaxLength - currentLen);
+      if (customCharRemaining) {
+        customCharRemaining.textContent = remaining;
+        customCharRemaining.style.color = remaining === 0 ? '#ef4444' : '#a21caf';
+      }
+      updateUI();
+    });
+  }
+
+  // 選項點擊事件
   pollCard.querySelectorAll('.option-vote').forEach(el => {
     el.onclick = () => {
       const idx = Number(el.dataset.index);
@@ -178,7 +253,7 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
         selected.add(idx);
       }
 
-      // 重新渲染選項狀態
+      // 重新渲染選項狀態標籤
       pollCard.querySelectorAll('.option-vote').forEach(opt => {
         const i = Number(opt.dataset.index);
         const active = selected.has(i);
@@ -198,6 +273,11 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
       });
 
       updateUI();
+
+      // 若選取了「其他」，自動聚焦輸入框
+      if (selected.has(-1) && customTextInput) {
+        setTimeout(() => customTextInput.focus(), 80);
+      }
     };
   });
 
@@ -218,6 +298,20 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
       return;
     }
 
+    let customText = null;
+    if (selected.has(-1)) {
+      customText = customTextInput ? customTextInput.value.trim() : '';
+      if (!customText) {
+        if (customTextInput) customTextInput.focus();
+        alert('請輸入你的自訂選項內容！');
+        return;
+      }
+      if (customText.length > customMaxLength) {
+        alert(`自訂選項內容不能超過 ${customMaxLength} 個字！`);
+        return;
+      }
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = '送出中...';
     pollCard.querySelectorAll('.option-vote').forEach(o => (o.style.pointerEvents = 'none'));
@@ -230,7 +324,8 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
         body: JSON.stringify({
           voterId,
           voterName,
-          optionIndices
+          optionIndices,
+          customText
         })
       });
 
@@ -240,10 +335,11 @@ function renderVoteForm(poll, preSelected = [], isEditing = false) {
       }
 
       // 儲存到 LocalStorage
-      localStorage.setItem(votedKey, JSON.stringify({ voterId, optionIndices }));
+      const finalVotes = data.userVotes || optionIndices;
+      localStorage.setItem(votedKey, JSON.stringify({ voterId, optionIndices: finalVotes }));
 
       const successMsg = data.isChange ? '選項已成功更新！以下是最新開票結果：' : '感謝你的投票！以下是最新開票結果：';
-      renderResults({ ...poll, options: data.results }, successMsg, optionIndices);
+      renderResults({ ...poll, options: data.results }, successMsg, finalVotes);
     } catch (err) {
       alert(err.message);
       loadPoll();
@@ -258,7 +354,11 @@ function renderResults(poll, message, userVotes = []) {
 
   const userVotesArray = Array.isArray(userVotes) ? userVotes : [];
   const chosenTexts = userVotesArray
-    .map(idx => poll.options.find(o => o.index === idx)?.text)
+    .map(idx => {
+      const opt = poll.options.find(o => o.index === idx);
+      if (!opt) return null;
+      return opt.isCustom ? `${opt.text} [自填]` : opt.text;
+    })
     .filter(Boolean);
 
   let noticeHtml = '';
@@ -302,12 +402,13 @@ function renderResults(poll, message, userVotes = []) {
       ${poll.options.map(o => {
         const pct = total ? Math.round((o.votes / total) * 100) : 0;
         const isMyChoice = userVotesArray.includes(o.index);
+        const customTag = o.isCustom ? `<span class="badge-custom-tag">[自填]</span>` : '';
 
         return `
           <div style="margin-bottom: 16px;">
             <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:500; margin-bottom: 4px;">
               <span style="display: flex; align-items: center; gap: 6px;">
-                ${escapeHtml(o.text)}
+                ${escapeHtml(o.text)} ${customTag}
                 ${isMyChoice ? '<span style="font-size: 11px; background: #e0e7ff; color: #4338ca; padding: 1px 6px; border-radius: 4px; font-weight: 600;">你的選擇</span>' : ''}
               </span>
               <span><strong>${o.votes}</strong> 票 (${pct}%)</span>

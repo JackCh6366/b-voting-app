@@ -267,20 +267,48 @@ button:disabled {
   border-bottom: none;
 }
 
+.poll-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.poll-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .poll-title {
   font-size: 16px;
   font-weight: 700;
   color: var(--text-main);
+  word-break: break-word;
 }
 
 .poll-meta {
   color: var(--text-muted);
   font-size: 13px;
-  margin-top: 4px;
+  margin-top: 5px;
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.poll-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.poll-item-actions button {
+  min-height: 38px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 8px;
 }
 
 .link-box {
@@ -290,9 +318,25 @@ button:disabled {
   background: var(--primary-light);
   border: 1px solid var(--primary-border);
   border-radius: var(--radius-md);
-  padding: 8px 14px;
+  padding: 8px 12px;
   font-size: 13px;
   word-break: break-all;
+}
+
+.poll-link-box {
+  margin-top: 12px;
+}
+
+.poll-link-url {
+  flex: 1;
+  font-family: monospace;
+  word-break: break-all;
+  font-size: 13px;
+  color: #3730a3;
+}
+
+.poll-results-preview {
+  margin-top: 14px;
 }
 
 /* 投票頁面：選項樣式 */
@@ -756,6 +800,354 @@ button:disabled {
   background: #fef2f2;
   color: #991b1b;
   border: 1px solid #fecaca;
+}
+
+/* 自訂選項（其他）設定外框 */
+.custom-option-setting-box {
+  background: #faf5ff;
+  border: 1.5px solid #e9d5ff;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-top: 14px;
+  margin-bottom: 16px;
+  transition: all 0.2s ease;
+}
+
+.custom-option-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.custom-option-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #6b21a8;
+}
+
+.custom-option-desc {
+  font-size: 12px;
+  color: #7e22ce;
+  margin-top: 2px;
+}
+
+/* Switch Toggle 開關組件 */
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 24px;
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.switch-toggle input:checked + .switch-slider {
+  background-color: #9333ea;
+}
+
+.switch-toggle input:checked + .switch-slider:before {
+  transform: translateX(20px);
+}
+
+.custom-max-length-row {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #d8b4fe;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 自填標籤徽章 */
+.badge-custom-tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #9333ea;
+  background: #f3e8ff;
+  border: 1px solid #d8b4fe;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* =========================================================
+   響應式設計 (RWD Media Queries)
+   涵蓋手機 (375px)、平板 (768px)、桌面 (1280px)
+   ========================================================= */
+
+/* 全域防止水平溢出捲動 */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* 平板尺寸優化 (<= 768px) */
+@media (max-width: 768px) {
+  body {
+    padding: 24px 16px;
+  }
+
+  .container {
+    max-width: 100%;
+  }
+
+  .card {
+    padding: 20px 18px;
+  }
+
+  .poll-item-header {
+    gap: 12px;
+  }
+}
+
+/* 行動裝置尺寸優化 (<= 640px) */
+@media (max-width: 640px) {
+  body {
+    padding: 16px 12px;
+  }
+
+  h1 {
+    font-size: 21px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .card {
+    padding: 16px 14px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+
+  /* 行動端輸入框字體設為 16px，徹底避免 iOS Safari 自動縮放畫面造成跑版 */
+  input[type="text"],
+  input[type="number"],
+  input[type="password"],
+  textarea {
+    font-size: 16px !important;
+    padding: 10px 12px;
+  }
+
+  /* 後台頂部狀態導覽列在手機端垂直分組 */
+  .admin-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .auth-status-area {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* 投票模式與 AI 選擇卡片在手機端單欄排版，觸控更舒適 */
+  .type-selector-group {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .ai-provider-group {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .multi-limit-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* 後台管理項目：標題資訊在上，4 個管理按鈕在下採用 2x2 觸控大網格 */
+  .poll-item-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .poll-item-info {
+    width: 100%;
+  }
+
+  .poll-item-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .poll-item-actions button {
+    width: 100%;
+    min-height: 42px; /* 符合行動端 44px 觸控友善標準 */
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 8px;
+    justify-content: center;
+  }
+
+  /* 刪除按鈕特別給予醒目警告風格，避免與一般操作誤觸 */
+  .poll-item-actions .deleteBtn {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1.5px solid #fca5a5;
+    font-weight: 700;
+  }
+
+  .poll-item-actions .deleteBtn:active {
+    background: #fee2e2;
+  }
+
+  /* 短連結列行動端排版 */
+  .poll-link-box {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .poll-link-url {
+    font-size: 12px;
+    word-break: break-all;
+  }
+
+  .poll-link-box .copyBtn {
+    min-width: 68px;
+    min-height: 40px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  /* 前台投票頁面行動端優化 */
+  .poll-mode-header {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+  }
+
+  .option-vote {
+    padding: 13px 14px;
+    min-height: 50px;
+    border-radius: 10px;
+  }
+
+  .option-vote-left {
+    font-size: 14.5px;
+    gap: 10px;
+  }
+
+  .btn-block {
+    min-height: 48px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+
+  /* 投票已完成提示區塊：在手機上轉為縱向並全寬按鈕 */
+  .voted-notice-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .voted-notice-card button {
+    width: 100%;
+    min-height: 42px;
+    font-size: 14px;
+    justify-content: center;
+  }
+
+  /* 彈跳視窗 Modal 行動端全寬與按鈕縱向 */
+  .modal-card {
+    padding: 20px 16px;
+    border-radius: 14px;
+    max-width: 100%;
+  }
+
+  .modal-actions {
+    flex-direction: column-reverse;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .modal-actions button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 14px;
+    justify-content: center;
+  }
+}
+
+/* 超窄小螢幕特別優化 (例如 iPhone SE 375px 及以下) */
+@media (max-width: 375px) {
+  body {
+    padding: 12px 8px;
+  }
+
+  .card {
+    padding: 14px 10px;
+  }
+
+  .poll-title {
+    font-size: 15px;
+  }
+
+  .poll-meta {
+    font-size: 12px;
+    gap: 6px;
+  }
+
+  .badge-lock, .badge-key {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+
+  .btn-sm {
+    font-size: 11px;
+    padding: 4px 8px;
+    min-height: 32px;
+  }
+
+  .poll-item-actions button {
+    font-size: 12px;
+    padding: 6px 4px;
+  }
 }
 
 

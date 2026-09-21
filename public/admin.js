@@ -11,6 +11,17 @@ const maxChoicesHint = document.getElementById('maxChoicesHint');
 const labelSingle = document.getElementById('labelSingle');
 const labelMultiple = document.getElementById('labelMultiple');
 
+// 自訂選項元件
+const allowCustomOptionCheckbox = document.getElementById('allowCustomOptionCheckbox');
+const customMaxLengthRow = document.getElementById('customMaxLengthRow');
+const customMaxLengthInput = document.getElementById('customMaxLengthInput');
+
+if (allowCustomOptionCheckbox && customMaxLengthRow) {
+  allowCustomOptionCheckbox.addEventListener('change', () => {
+    customMaxLengthRow.style.display = allowCustomOptionCheckbox.checked ? 'flex' : 'none';
+  });
+}
+
 // AI 輔助建立元件
 const aiUploadDropzone = document.getElementById('aiUploadDropzone');
 const aiImageInput = document.getElementById('aiImageInput');
@@ -462,12 +473,15 @@ createBtn.onclick = async () => {
     }
   }
 
+  const allowCustomOption = allowCustomOptionCheckbox ? allowCustomOptionCheckbox.checked : false;
+  const customOptionMaxLength = customMaxLengthInput ? (parseInt(customMaxLengthInput.value, 10) || 40) : 40;
+
   createBtn.disabled = true;
   try {
     const res = await fetch('/api/polls', {
       method: 'POST',
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ title, note, options, isMultiple, maxChoices })
+      body: JSON.stringify({ title, note, options, isMultiple, maxChoices, allowCustomOption, customOptionMaxLength })
     });
     const data = await res.json();
     handleAuthError(res, data);
@@ -478,15 +492,21 @@ createBtn.onclick = async () => {
     addOptionRow();
     addOptionRow();
 
-    // 重設回單選模式
+    // 重設回單選模式與自訂選項開關
     document.querySelector('input[name="pollType"][value="single"]').checked = true;
     labelSingle.classList.add('checked');
     labelMultiple.classList.remove('checked');
     multiLimitSection.style.display = 'none';
     maxChoicesInput.value = 2;
 
+    if (allowCustomOptionCheckbox) {
+      allowCustomOptionCheckbox.checked = false;
+      customMaxLengthRow.style.display = 'none';
+      customMaxLengthInput.value = 40;
+    }
+
     await loadPolls();
-    alert(`投票建立成功！\n投票模式：${isMultiple ? `複選（每人最多 ${maxChoices} 票）` : '單選'}\n短連結：${data.voteUrl}`);
+    alert(`投票建立成功！\n投票模式：${isMultiple ? `複選（每人最多 ${maxChoices} 票）` : '單選'}${allowCustomOption ? `\n自訂選項：已開啟（上限 ${customOptionMaxLength} 字）` : ''}\n短連結：${data.voteUrl}`);
   } catch (err) {
     alert(err.message);
   } finally {
@@ -560,18 +580,23 @@ async function loadPolls() {
       ? `<div class="admin-poll-note">📝 <strong>備註：</strong>${escapeHtml(p.note)}</div>`
       : '';
 
+    const customBadge = p.allowCustomOption
+      ? `<span class="badge" style="background:#fdf4ff; color:#a21caf; border:1px solid #f0abfc;">✍️ 開放自填 (上限 ${p.customOptionMaxLength || 40} 字)</span>`
+      : '';
+
     return `
       <div class="poll-item" data-code="${p.shortCode}">
-        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap: 12px;">
-          <div>
+        <div class="poll-item-header">
+          <div class="poll-item-info">
             <div class="poll-title">${escapeHtml(p.title)}</div>
             <div class="poll-meta">
               ${modeBadge}
+              ${customBadge}
               <span class="badge ${p.active ? '' : 'inactive'}">${p.active ? '進行中' : '已結束'}</span>
               <span>共 <strong>${totalVotes}</strong> 票</span>
             </div>
           </div>
-          <div style="display:flex; gap:6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end;">
+          <div class="poll-item-actions">
             <button class="btn-secondary editNoteBtn" data-code="${p.shortCode}">編輯備註</button>
             <button class="btn-secondary toggleBtn" data-code="${p.shortCode}" data-active="${p.active}">
               ${p.active ? '結束投票' : '重新開放'}
@@ -581,17 +606,18 @@ async function loadPolls() {
           </div>
         </div>
         ${noteHtml}
-        <div class="link-box" style="margin-top:12px;">
-          <span style="flex:1; font-family: monospace;">${p.voteUrl}</span>
+        <div class="link-box poll-link-box">
+          <span class="poll-link-url">${p.voteUrl}</span>
           <button class="btn-secondary copyBtn" data-url="${p.voteUrl}">複製</button>
         </div>
-        <div style="margin-top:14px;">
+        <div class="poll-results-preview">
           ${p.options.map(o => {
             const pct = totalVotes ? Math.round((o.votes / totalVotes) * 100) : 0;
+            const customTag = o.isCustom ? `<span class="badge-custom-tag">[自填]</span>` : '';
             return `
               <div style="font-size:13px; margin-bottom:8px;">
                 <div style="display:flex; justify-content:space-between; font-weight: 500;">
-                  <span>${escapeHtml(o.text)}</span>
+                  <span>${escapeHtml(o.text)} ${customTag}</span>
                   <span>${o.votes} 票（${pct}%）</span>
                 </div>
                 <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;"></div></div>

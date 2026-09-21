@@ -1,5 +1,704 @@
 {
-  "polls": {},
+  "polls": {
+    "demo88": {
+      "id": "test_demo_rwd",
+      "shortCode": "demo88",
+      "title": "【尾牙聚餐意願調查】今年年底部門尾牙你想吃哪種類型的餐廳？",
+      "note": "請大家於週五下班前填寫完畢，預算每人 1500 元內。",
+      "options": [
+        {
+          "index": 0,
+          "text": "日式精緻燒肉放題",
+          "votes": 0
+        },
+        {
+          "index": 1,
+          "text": "五星級飯店Buffet自助百匯",
+          "votes": 0
+        },
+        {
+          "index": 2,
+          "text": "米其林推薦經典台菜私廚",
+          "votes": 0
+        }
+      ],
+      "isMultiple": true,
+      "maxChoices": 2,
+      "createdAt": 1789963304807,
+      "active": true,
+      "voteLog": [],
+      "voters": {}
+    },
+    "2tkR50": {
+      "id": "aKkY9bWjsRY1",
+      "shortCode": "2tkR50",
+      "title": "一般固定選項投票（未開自填）",
+      "note": "",
+      "options": [
+        {
+          "index": 0,
+          "text": "拉麵",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "咖哩飯",
+          "votes": 0,
+          "isCustom": false
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": false,
+      "customOptionMaxLength": 40,
+      "createdAt": 1789964368902,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1789964368914,
+          "voterId": "user_std_1",
+          "previousIndices": null,
+          "newIndices": [
+            0
+          ],
+          "customText": null,
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "user_std_1": [
+          0
+        ]
+      }
+    },
+    "NxaD1W": {
+      "id": "24svidVPNdw0",
+      "shortCode": "NxaD1W",
+      "title": "下午茶點心意願調查（開放自訂）",
+      "note": "",
+      "options": [
+        {
+          "index": 0,
+          "text": "原味雞蛋糕",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "紅豆餅",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "四季春無糖去冰",
+          "votes": 1,
+          "isCustom": true
+        },
+        {
+          "index": 3,
+          "text": "Four Seasons Tea",
+          "votes": 2,
+          "isCustom": true
+        },
+        {
+          "index": 4,
+          "text": "珍珠奶茶微糖",
+          "votes": 1,
+          "isCustom": true
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": true,
+      "customOptionMaxLength": 40,
+      "createdAt": 1789964368926,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1789964368938,
+          "voterId": "voter_A",
+          "previousIndices": null,
+          "newIndices": [
+            2
+          ],
+          "customText": "四季春無糖去冰",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789964368949,
+          "voterId": "voter_B",
+          "previousIndices": null,
+          "newIndices": [
+            2
+          ],
+          "customText": "四季春無糖去冰",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789964368960,
+          "voterId": "voter_C",
+          "previousIndices": null,
+          "newIndices": [
+            3
+          ],
+          "customText": "Four Seasons Tea",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789964368971,
+          "voterId": "voter_D",
+          "previousIndices": null,
+          "newIndices": [
+            3
+          ],
+          "customText": "four seasons tea",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789964368981,
+          "voterId": "voter_A",
+          "previousIndices": [
+            2
+          ],
+          "newIndices": [
+            0
+          ],
+          "customText": null,
+          "isChange": true
+        },
+        {
+          "timestamp": 1789964369004,
+          "voterId": "voter_sheet_single",
+          "previousIndices": null,
+          "newIndices": [
+            4
+          ],
+          "customText": "珍珠奶茶微糖",
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "voter_A": [
+          0
+        ],
+        "voter_B": [
+          2
+        ],
+        "voter_C": [
+          3
+        ],
+        "voter_D": [
+          3
+        ],
+        "voter_sheet_single": [
+          4
+        ]
+      }
+    },
+    "fYpAY-": {
+      "id": "YhSnWexXTveQ",
+      "shortCode": "fYpAY-",
+      "title": "部門聚餐複選調查",
+      "note": "",
+      "options": [
+        {
+          "index": 0,
+          "text": "披薩",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "炸雞",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "壽司",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 3,
+          "text": "泰式椒麻雞",
+          "votes": 1,
+          "isCustom": true
+        }
+      ],
+      "isMultiple": true,
+      "maxChoices": 3,
+      "allowCustomOption": true,
+      "customOptionMaxLength": 40,
+      "createdAt": 1789964369014,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1789964369025,
+          "voterId": "voter_sheet_multi",
+          "previousIndices": null,
+          "newIndices": [
+            0,
+            3
+          ],
+          "customText": "泰式椒麻雞",
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "voter_sheet_multi": [
+          0,
+          3
+        ]
+      }
+    },
+    "_qmk2Y": {
+      "id": "sooMV5flkWxA",
+      "shortCode": "_qmk2Y",
+      "title": "短評投票（字數上限自訂 20 字）",
+      "note": "",
+      "options": [
+        {
+          "index": 0,
+          "text": "贊成",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "反對",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "這是一個十九個字的正常自訂選項喔喔",
+          "votes": 1,
+          "isCustom": true
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": true,
+      "customOptionMaxLength": 20,
+      "createdAt": 1789964369037,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1789964369048,
+          "voterId": "user_limit_1",
+          "previousIndices": null,
+          "newIndices": [
+            2
+          ],
+          "customText": "這是一個十九個字的正常自訂選項喔喔",
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "user_limit_1": [
+          2
+        ]
+      }
+    },
+    "custom88": {
+      "id": "poll_custom_ui_test",
+      "shortCode": "custom88",
+      "title": "今日下午茶飲料統計（開放自填選項）",
+      "note": "歡迎大家填寫想喝的品項～",
+      "options": [
+        {
+          "index": 0,
+          "text": "熟成紅茶",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "烏龍拿鐵",
+          "votes": 0,
+          "isCustom": false
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": true,
+      "customOptionMaxLength": 25,
+      "createdAt": 1789964381122,
+      "active": true,
+      "voteLog": [],
+      "voters": {}
+    },
+    "OYbKI3": {
+      "id": "Y3QG30rV8Xqh",
+      "shortCode": "OYbKI3",
+      "title": "一般固定選項投票（未開自填）",
+      "note": "",
+      "options": [
+        {
+          "index": 0,
+          "text": "拉麵",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "咖哩飯",
+          "votes": 0,
+          "isCustom": false
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": false,
+      "customOptionMaxLength": 40,
+      "createdAt": 1789965240849,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1789965240862,
+          "voterId": "user_std_1",
+          "previousIndices": null,
+          "newIndices": [
+            0
+          ],
+          "customText": null,
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "user_std_1": [
+          0
+        ]
+      }
+    },
+    "mPP0LJ": {
+      "id": "Yx5jifsmW8um",
+      "shortCode": "mPP0LJ",
+      "title": "下午茶點心意願調查（開放自訂）",
+      "note": "",
+      "options": [
+        {
+          "index": 0,
+          "text": "原味雞蛋糕",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "紅豆餅",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "四季春無糖去冰",
+          "votes": 1,
+          "isCustom": true
+        },
+        {
+          "index": 3,
+          "text": "Four Seasons Tea",
+          "votes": 2,
+          "isCustom": true
+        },
+        {
+          "index": 4,
+          "text": "珍珠奶茶微糖",
+          "votes": 1,
+          "isCustom": true
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": true,
+      "customOptionMaxLength": 40,
+      "createdAt": 1789965240870,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1789965240877,
+          "voterId": "voter_A",
+          "previousIndices": null,
+          "newIndices": [
+            2
+          ],
+          "customText": "四季春無糖去冰",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789965240883,
+          "voterId": "voter_B",
+          "previousIndices": null,
+          "newIndices": [
+            2
+          ],
+          "customText": "四季春無糖去冰",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789965240889,
+          "voterId": "voter_C",
+          "previousIndices": null,
+          "newIndices": [
+            3
+          ],
+          "customText": "Four Seasons Tea",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789965240894,
+          "voterId": "voter_D",
+          "previousIndices": null,
+          "newIndices": [
+            3
+          ],
+          "customText": "four seasons tea",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789965240900,
+          "voterId": "voter_A",
+          "previousIndices": [
+            2
+          ],
+          "newIndices": [
+            0
+          ],
+          "customText": null,
+          "isChange": true
+        },
+        {
+          "timestamp": 1789965240908,
+          "voterId": "voter_sheet_single",
+          "previousIndices": null,
+          "newIndices": [
+            4
+          ],
+          "customText": "珍珠奶茶微糖",
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "voter_A": [
+          0
+        ],
+        "voter_B": [
+          2
+        ],
+        "voter_C": [
+          3
+        ],
+        "voter_D": [
+          3
+        ],
+        "voter_sheet_single": [
+          4
+        ]
+      }
+    },
+    "T9UkqD": {
+      "id": "ls8OVoUA9_ah",
+      "shortCode": "T9UkqD",
+      "title": "部門聚餐複選調查",
+      "note": "",
+      "options": [
+        {
+          "index": 0,
+          "text": "披薩",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "炸雞",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "壽司",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 3,
+          "text": "泰式椒麻雞",
+          "votes": 1,
+          "isCustom": true
+        }
+      ],
+      "isMultiple": true,
+      "maxChoices": 3,
+      "allowCustomOption": true,
+      "customOptionMaxLength": 40,
+      "createdAt": 1789965240915,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1789965240919,
+          "voterId": "voter_sheet_multi",
+          "previousIndices": null,
+          "newIndices": [
+            0,
+            3
+          ],
+          "customText": "泰式椒麻雞",
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "voter_sheet_multi": [
+          0,
+          3
+        ]
+      }
+    },
+    "Taf_oC": {
+      "id": "OGQZes-Rtnf0",
+      "shortCode": "Taf_oC",
+      "title": "短評投票（字數上限自訂 20 字）",
+      "note": "",
+      "options": [
+        {
+          "index": 0,
+          "text": "贊成",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "反對",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "這是一個十九個字的正常自訂選項喔喔",
+          "votes": 1,
+          "isCustom": true
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": true,
+      "customOptionMaxLength": 20,
+      "createdAt": 1789965240928,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1789965240935,
+          "voterId": "user_limit_1",
+          "previousIndices": null,
+          "newIndices": [
+            2
+          ],
+          "customText": "這是一個十九個字的正常自訂選項喔喔",
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "user_limit_1": [
+          2
+        ]
+      }
+    },
+    "N48ta4": {
+      "id": "EXzy4McXKJsz",
+      "shortCode": "N48ta4",
+      "title": "??????????",
+      "note": "?????????",
+      "options": [
+        {
+          "index": 0,
+          "text": "??",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "??",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "??",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 3,
+          "text": "??",
+          "votes": 1,
+          "isCustom": true
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": true,
+      "customOptionMaxLength": 30,
+      "createdAt": 1789965277747,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1789965292483,
+          "voterId": "test_voter_1",
+          "previousIndices": null,
+          "newIndices": [
+            3
+          ],
+          "customText": "??",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789965292513,
+          "voterId": "test_voter_2",
+          "previousIndices": null,
+          "newIndices": [
+            3
+          ],
+          "customText": "??",
+          "isChange": false
+        },
+        {
+          "timestamp": 1789965292526,
+          "voterId": "test_voter_3",
+          "previousIndices": null,
+          "newIndices": [
+            0
+          ],
+          "customText": null,
+          "isChange": false
+        },
+        {
+          "timestamp": 1789965292537,
+          "voterId": "test_voter_1",
+          "previousIndices": [
+            3
+          ],
+          "newIndices": [
+            1
+          ],
+          "customText": null,
+          "isChange": true
+        }
+      ],
+      "voters": {
+        "test_voter_1": [
+          1
+        ],
+        "test_voter_2": [
+          3
+        ],
+        "test_voter_3": [
+          0
+        ]
+      }
+    }
+  },
   "systemConfig": {
     "adminAuthEnabled": false
   }

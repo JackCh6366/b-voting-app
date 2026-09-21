@@ -107,6 +107,25 @@
         <div id="optionsList"></div>
         <button class="btn-secondary" id="addOptionBtn" type="button">+ 新增選項</button>
 
+        <!-- 自訂選項（其他）設定區塊 -->
+        <div class="custom-option-setting-box">
+          <div class="custom-option-toggle-row">
+            <div>
+              <div class="custom-option-title">✍️ 允許填答者填寫「自訂選項（其他）」</div>
+              <div class="custom-option-desc">開啟後，投票頁面將多出「其他（請自行填寫）」輸入框，並計入開票結果</div>
+            </div>
+            <label class="switch-toggle">
+              <input type="checkbox" id="allowCustomOptionCheckbox" />
+              <span class="switch-slider"></span>
+            </label>
+          </div>
+          <div id="customMaxLengthRow" class="custom-max-length-row" style="display: none;">
+            <label for="customMaxLengthInput" style="margin:0; font-size:13px; font-weight:600;">自填文字字數上限：</label>
+            <input type="number" id="customMaxLengthInput" value="40" min="5" max="200" style="width: 80px; text-align: center; padding: 6px 10px;" />
+            <span style="font-size:12px; color: var(--text-muted);">字（預設 40，可自訂 5 ~ 200 字）</span>
+          </div>
+        </div>
+
         <label for="noteInput">投票備註</label>
         <textarea id="noteInput" rows="3" placeholder="補充說明，例如活動規則、截止時間等（選填）"></textarea>
 
