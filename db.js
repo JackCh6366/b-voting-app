@@ -113,7 +113,7 @@ async function updatePoll(shortCode, { title, options, active, isMultiple, maxCh
   const poll = await getPollByShortCode(shortCode);
   if (!poll) return null;
 
-  if (title !== undefined) poll.title = title;
+  if (title !== undefined) poll.title = typeof title === 'string' ? title.trim() : poll.title;
   if (note !== undefined) poll.note = typeof note === 'string' ? note.trim() : '';
   if (active !== undefined) poll.active = active;
   if (isMultiple !== undefined) poll.isMultiple = Boolean(isMultiple);

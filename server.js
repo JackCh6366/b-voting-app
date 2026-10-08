@@ -185,7 +185,11 @@ app.get('/api/polls/:shortCode', async (req, res) => {
 app.put('/api/polls/:shortCode', requireAdminAuth, async (req, res) => {
   try {
     const { title, options, active, isMultiple, maxChoices, note, allowCustomOption, customOptionMaxLength } = req.body;
-    const poll = await db.updatePoll(req.params.shortCode, { title, options, active, isMultiple, maxChoices, note, allowCustomOption, customOptionMaxLength });
+    if (title !== undefined && (typeof title !== 'string' || !title.trim())) {
+      return res.status(400).json({ error: '投票標題不可為空' });
+    }
+    const cleanTitle = title !== undefined ? title.trim() : undefined;
+    const poll = await db.updatePoll(req.params.shortCode, { title: cleanTitle, options, active, isMultiple, maxChoices, note, allowCustomOption, customOptionMaxLength });
     if (!poll) return res.status(404).json({ error: '找不到這個投票' });
     const { voters, voteLog, ...safePoll } = poll;
     res.json(safePoll);
@@ -203,6 +207,9 @@ app.get('/api/admin/polls/:shortCode/log', requireAdminAuth, async (req, res) =>
     res.json({
       shortCode: poll.shortCode,
       title: poll.title,
+      isMultiple: Boolean(poll.isMultiple),
+      maxChoices: poll.maxChoices || 1,
+      options: poll.options || [],
       voters: poll.voters || {},
       voteLog: poll.voteLog || []
     });

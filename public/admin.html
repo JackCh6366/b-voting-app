@@ -137,23 +137,53 @@
       <h2 style="font-size:16px; margin-top:0;">所有投票</h2>
       <div id="pollList"><div class="empty">尚未建立任何投票</div></div>
     </div>
+
+    <!-- 投票紀錄查詢卡片 -->
+    <div class="card" id="logSection">
+      <div class="card-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="font-size:16px; margin:0; display:flex; align-items:center; gap:6px;">
+          <span>📊 投票主題紀錄查詢</span>
+        </h2>
+        <span style="font-size:12px; color:var(--text-muted);">查看投票者明細、時間與選擇</span>
+      </div>
+
+      <div class="log-query-bar">
+        <div style="flex:1;">
+          <label for="logPollSelect" style="margin-top:0; font-size:13px; font-weight:600;">選擇投票主題：</label>
+          <select id="logPollSelect" class="styled-select">
+            <option value="">-- 請選擇投票主題 --</option>
+          </select>
+        </div>
+        <div class="log-btn-group">
+          <button class="btn-primary" id="queryLogBtn" type="button">🔍 查詢紀錄</button>
+          <button class="btn-secondary" id="refreshLogBtn" type="button" title="重新整理當前投票紀錄">🔄</button>
+        </div>
+      </div>
+
+      <!-- 紀錄查詢結果容器 -->
+      <div id="logResultContainer" style="margin-top:16px;">
+        <div class="empty">請由上方選單選擇投票主題後點選「查詢紀錄」</div>
+      </div>
+    </div>
   </div>
 
-  <!-- 編輯備註彈跳視窗 -->
-  <div class="modal-overlay" id="editNoteModal">
+  <!-- 編輯主題與備註彈跳視窗 -->
+  <div class="modal-overlay" id="editPollModal">
     <div class="modal-card">
       <div class="modal-header">
-        <div class="modal-title">✏️ 編輯投票備註</div>
-        <button type="button" class="btn-secondary" id="closeNoteModalBtn" style="padding: 4px 8px; font-size: 12px;">✕</button>
+        <div class="modal-title">✏️ 編輯投票主題與備註</div>
+        <button type="button" class="btn-secondary" id="closePollModalBtn" style="padding: 4px 8px; font-size: 12px;">✕</button>
       </div>
-      <p style="font-size: 13px; color: var(--text-muted); margin-top: 0; margin-bottom: 12px;">
-        投票主題：<strong id="modalPollTitle" style="color: var(--text-main);"></strong>
-      </p>
-      <label for="modalNoteTextarea" style="margin-top:0;">備註說明內容（支援清空或事後補上）：</label>
-      <textarea id="modalNoteTextarea" rows="4" placeholder="補充說明，例如活動規則、截止時間等（選填）"></textarea>
+      
+      <label for="modalPollTitleInput" style="margin-top:0;">投票主題 / 標題 <span style="color:#ef4444;">*</span>：</label>
+      <input type="text" id="modalPollTitleInput" placeholder="請輸入投票主題或標題" style="width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1.5px solid #d1d5db; border-radius: 8px; font-size: 14px; margin-bottom: 14px;" />
+
+      <label for="modalNoteTextarea">備註說明內容（選填）：</label>
+      <textarea id="modalNoteTextarea" rows="3" placeholder="補充說明，例如活動規則、截止時間等（選填）"></textarea>
+
       <div class="modal-actions">
-        <button type="button" class="btn-secondary" id="cancelNoteModalBtn">取消</button>
-        <button type="button" class="btn-primary" id="saveNoteModalBtn">儲存備註</button>
+        <button type="button" class="btn-secondary" id="cancelPollModalBtn">取消</button>
+        <button type="button" class="btn-primary" id="savePollModalBtn">儲存修改</button>
       </div>
     </div>
   </div>

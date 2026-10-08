@@ -37,14 +37,21 @@ const aiProviderRadios = document.querySelectorAll('input[name="aiProvider"]');
 
 let currentImageBase64 = null;
 
-// 編輯備註 Modal 元件
-const editNoteModal = document.getElementById('editNoteModal');
-const modalPollTitle = document.getElementById('modalPollTitle');
+// 編輯投票主題與備註 Modal 元件
+const editPollModal = document.getElementById('editPollModal');
+const modalPollTitleInput = document.getElementById('modalPollTitleInput');
 const modalNoteTextarea = document.getElementById('modalNoteTextarea');
-const closeNoteModalBtn = document.getElementById('closeNoteModalBtn');
-const cancelNoteModalBtn = document.getElementById('cancelNoteModalBtn');
-const saveNoteModalBtn = document.getElementById('saveNoteModalBtn');
+const closePollModalBtn = document.getElementById('closePollModalBtn');
+const cancelPollModalBtn = document.getElementById('cancelPollModalBtn');
+const savePollModalBtn = document.getElementById('savePollModalBtn');
 let currentEditingShortCode = null;
+
+// 投票主題紀錄查詢元件
+const logPollSelect = document.getElementById('logPollSelect');
+const queryLogBtn = document.getElementById('queryLogBtn');
+const refreshLogBtn = document.getElementById('refreshLogBtn');
+const logResultContainer = document.getElementById('logResultContainer');
+let cachedPolls = [];
 
 // ---------- 管理者金鑰儲存與狀態管理 ----------
 const authModal = document.getElementById('authModal');
@@ -514,48 +521,215 @@ createBtn.onclick = async () => {
   }
 };
 
-// ---------- 編輯備註 Modal 控制 ----------
+// ---------- 編輯主題與備註 Modal 控制 ----------
 
-function openEditNoteModal(poll) {
+function openEditPollModal(poll) {
   currentEditingShortCode = poll.shortCode;
-  modalPollTitle.textContent = poll.title;
+  modalPollTitleInput.value = poll.title || '';
   modalNoteTextarea.value = poll.note || '';
-  editNoteModal.classList.add('active');
-  modalNoteTextarea.focus();
+  editPollModal.classList.add('active');
+  modalPollTitleInput.focus();
 }
 
-function closeEditNoteModal() {
+function closeEditPollModal() {
   currentEditingShortCode = null;
-  editNoteModal.classList.remove('active');
+  editPollModal.classList.remove('active');
 }
 
-closeNoteModalBtn.onclick = closeEditNoteModal;
-cancelNoteModalBtn.onclick = closeEditNoteModal;
+closePollModalBtn.onclick = closeEditPollModal;
+cancelPollModalBtn.onclick = closeEditPollModal;
 
-saveNoteModalBtn.onclick = async () => {
+savePollModalBtn.onclick = async () => {
   if (!currentEditingShortCode) return;
 
-  saveNoteModalBtn.disabled = true;
-  saveNoteModalBtn.textContent = '儲存中...';
+  const newTitle = modalPollTitleInput.value.trim();
+  if (!newTitle) {
+    return alert('請輸入投票主題 / 標題，不可為空！');
+  }
+
+  savePollModalBtn.disabled = true;
+  savePollModalBtn.textContent = '儲存中...';
 
   try {
     const newNote = modalNoteTextarea.value.trim();
     const res = await fetch(`/api/polls/${currentEditingShortCode}`, {
       method: 'PUT',
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ note: newNote })
+      body: JSON.stringify({ title: newTitle, note: newNote })
     });
 
     const data = await res.json();
     handleAuthError(res, data);
 
-    closeEditNoteModal();
+    closeEditPollModal();
     await loadPolls();
+
+    // 若當前紀錄查詢區剛好正顯示此投票，自動同步更新紀錄區顯示
+    if (logPollSelect && logPollSelect.value === currentEditingShortCode) {
+      fetchAndRenderPollLog(currentEditingShortCode);
+    }
+    alert('✅ 投票主題與備註已更新成功！');
   } catch (err) {
     alert(`儲存失敗：${err.message}`);
   } finally {
-    saveNoteModalBtn.disabled = false;
-    saveNoteModalBtn.textContent = '儲存備註';
+    savePollModalBtn.disabled = false;
+    savePollModalBtn.textContent = '儲存修改';
+  }
+};
+
+// ---------- 投票主題紀錄查詢邏輯 ----------
+
+async function fetchAndRenderPollLog(shortCode) {
+  if (!shortCode) {
+    logResultContainer.innerHTML = '<div class="empty">請由上方選單選擇投票主題後點選「查詢紀錄」</div>';
+    return;
+  }
+
+  queryLogBtn.disabled = true;
+  refreshLogBtn.disabled = true;
+  logResultContainer.innerHTML = '<div class="empty">⏳ 正在載入投票紀錄，請稍候...</div>';
+
+  try {
+    const res = await fetch(`/api/admin/polls/${encodeURIComponent(shortCode)}/log`, {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    handleAuthError(res, data);
+
+    const logs = Array.isArray(data.voteLog) ? data.voteLog : [];
+    const voters = data.voters || {};
+    const voterCount = Object.keys(voters).length;
+    const logCount = logs.length;
+    const optionMap = {};
+    (data.options || []).forEach(o => {
+      optionMap[o.index] = o.text;
+    });
+
+    if (logCount === 0) {
+      logResultContainer.innerHTML = `
+        <div class="log-stats-bar">
+          <div class="log-stat-card">
+            <div class="log-stat-title">查詢主題</div>
+            <div class="log-stat-value" style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(data.title)}">${escapeHtml(data.title)}</div>
+          </div>
+          <div class="log-stat-card">
+            <div class="log-stat-title">已投票人數</div>
+            <div class="log-stat-value">0 人</div>
+          </div>
+          <div class="log-stat-card">
+            <div class="log-stat-title">投票紀錄總次數</div>
+            <div class="log-stat-value">0 次</div>
+          </div>
+        </div>
+        <div class="empty">🗳️ 此投票主題目前尚無任何投票紀錄（尚未有參與者填寫）</div>
+      `;
+      return;
+    }
+
+    // 將紀錄按時間由新到舊排序
+    const sortedLogs = [...logs].reverse();
+
+    const rowsHtml = sortedLogs.map((item, idx) => {
+      const timeStr = item.timestamp ? new Date(item.timestamp).toLocaleString('zh-TW', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }) : '未知時間';
+
+      const actionBadge = item.isChange
+        ? `<span class="badge" style="background:#fffbeb; color:#b45309; border:1px solid #fef3c7;">🔄 更換選項</span>`
+        : `<span class="badge" style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;">✨ 初次投票</span>`;
+
+      // 解析所選選項
+      const chosenIndices = Array.isArray(item.newIndices) ? item.newIndices : [];
+      let choicesHtml = '';
+      if (chosenIndices.length === 0) {
+        choicesHtml = '<span style="color:var(--text-muted); font-size:12px;">無選項紀錄</span>';
+      } else {
+        choicesHtml = chosenIndices.map(index => {
+          const optText = optionMap[index] || (item.customText && index >= 0 ? item.customText : `選項 #${index}`);
+          const isCustom = item.customText && (optionMap[index] === item.customText || optText.includes(item.customText));
+          return `<span class="option-choice-tag ${isCustom ? 'option-choice-custom' : ''}">${escapeHtml(optText)}${isCustom ? ' [自填]' : ''}</span>`;
+        }).join('');
+      }
+
+      return `
+        <tr>
+          <td style="color:var(--text-muted); font-size:12px;">#${logCount - idx}</td>
+          <td style="white-space:nowrap; font-size:12.5px;">${timeStr}</td>
+          <td><span class="voter-id-badge">${escapeHtml(item.voterId || '匿名訪客')}</span></td>
+          <td>${choicesHtml}</td>
+          <td style="white-space:nowrap;">${actionBadge}</td>
+        </tr>
+      `;
+    }).join('');
+
+    logResultContainer.innerHTML = `
+      <div class="log-stats-bar">
+        <div class="log-stat-card">
+          <div class="log-stat-title">查詢主題</div>
+          <div class="log-stat-value" style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(data.title)}">${escapeHtml(data.title)}</div>
+        </div>
+        <div class="log-stat-card">
+          <div class="log-stat-title">已投票人數</div>
+          <div class="log-stat-value">${voterCount} <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">人</span></div>
+        </div>
+        <div class="log-stat-card">
+          <div class="log-stat-title">投票紀錄總次數</div>
+          <div class="log-stat-value">${logCount} <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">次</span></div>
+        </div>
+      </div>
+
+      <div class="log-table-wrap">
+        <table class="log-table">
+          <thead>
+            <tr>
+              <th style="width:45px;">序號</th>
+              <th style="width:160px;">投票時間</th>
+              <th style="width:130px;">投票者 (Voter ID)</th>
+              <th>選擇項目</th>
+              <th style="width:90px;">狀態</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    logResultContainer.innerHTML = `<div class="empty" style="color:#ef4444;">查詢紀錄失敗：${escapeHtml(err.message)}</div>`;
+  } finally {
+    queryLogBtn.disabled = false;
+    refreshLogBtn.disabled = false;
+  }
+}
+
+queryLogBtn.onclick = () => {
+  const code = logPollSelect.value;
+  if (!code) {
+    return alert('請先從下拉選單選擇要查詢的投票主題！');
+  }
+  fetchAndRenderPollLog(code);
+};
+
+refreshLogBtn.onclick = () => {
+  const code = logPollSelect.value;
+  if (!code) {
+    return alert('請先從下拉選單選擇要查詢的投票主題！');
+  }
+  fetchAndRenderPollLog(code);
+};
+
+logPollSelect.onchange = () => {
+  if (logPollSelect.value) {
+    fetchAndRenderPollLog(logPollSelect.value);
+  } else {
+    logResultContainer.innerHTML = '<div class="empty">請由上方選單選擇投票主題後點選「查詢紀錄」</div>';
   }
 };
 
@@ -564,13 +738,22 @@ saveNoteModalBtn.onclick = async () => {
 async function loadPolls() {
   const res = await fetch('/api/polls');
   const polls = await res.json();
+  cachedPolls = Array.isArray(polls) ? polls : [];
 
-  if (polls.length === 0) {
+  // 更新紀錄查詢下拉選單
+  const prevSelected = logPollSelect.value;
+  logPollSelect.innerHTML = '<option value="">-- 請選擇投票主題 --</option>' +
+    cachedPolls.map(p => `<option value="${p.shortCode}">${escapeHtml(p.title)} (${p.shortCode})</option>`).join('');
+  if (prevSelected && cachedPolls.some(p => p.shortCode === prevSelected)) {
+    logPollSelect.value = prevSelected;
+  }
+
+  if (cachedPolls.length === 0) {
     pollListEl.innerHTML = '<div class="empty">尚未建立任何投票</div>';
     return;
   }
 
-  pollListEl.innerHTML = polls.map(p => {
+  pollListEl.innerHTML = cachedPolls.map(p => {
     const totalVotes = p.options.reduce((sum, o) => sum + o.votes, 0);
     const modeBadge = p.isMultiple
       ? `<span class="badge multi">複選 (最多 ${p.maxChoices || 2} 票)</span>`
@@ -597,7 +780,9 @@ async function loadPolls() {
             </div>
           </div>
           <div class="poll-item-actions">
-            <button class="btn-secondary editNoteBtn" data-code="${p.shortCode}">編輯備註</button>
+            <button class="btn-secondary editPollBtn" data-code="${p.shortCode}">✏️ 編輯標題/備註</button>
+            <button class="btn-secondary duplicateBtn" data-code="${p.shortCode}">📋 複製為新投票</button>
+            <button class="btn-secondary viewLogBtn" data-code="${p.shortCode}">📊 查詢紀錄</button>
             <button class="btn-secondary toggleBtn" data-code="${p.shortCode}" data-active="${p.active}">
               ${p.active ? '結束投票' : '重新開放'}
             </button>
@@ -647,7 +832,7 @@ async function loadPolls() {
         });
         const data = await res.json().catch(() => ({}));
         handleAuthError(res, data);
-        loadPolls();
+        await loadPolls();
       } catch (err) {
         alert(err.message);
       }
@@ -665,7 +850,7 @@ async function loadPolls() {
         });
         const data = await res.json().catch(() => ({}));
         handleAuthError(res, data);
-        loadPolls();
+        await loadPolls();
       } catch (err) {
         alert(err.message);
       }
@@ -697,13 +882,84 @@ async function loadPolls() {
     };
   });
 
-  pollListEl.querySelectorAll('.editNoteBtn').forEach(btn => {
+  pollListEl.querySelectorAll('.editPollBtn').forEach(btn => {
     btn.onclick = () => {
       const code = btn.dataset.code;
-      const poll = polls.find(p => p.shortCode === code);
+      const poll = cachedPolls.find(p => p.shortCode === code);
       if (poll) {
-        openEditNoteModal(poll);
+        openEditPollModal(poll);
       }
+    };
+  });
+
+  // 複製先前投票建立新主題
+  pollListEl.querySelectorAll('.duplicateBtn').forEach(btn => {
+    btn.onclick = async () => {
+      const code = btn.dataset.code;
+      const poll = cachedPolls.find(p => p.shortCode === code);
+      if (!poll) return;
+
+      const defaultTitle = `[副本] ${poll.title}`;
+      const newTitle = prompt('確定要複製此投票建立新主題嗎？\n請確認或修改新投票標題：', defaultTitle);
+      if (newTitle === null) return; // 使用者點選取消
+
+      const cleanTitle = newTitle.trim();
+      if (!cleanTitle) {
+        return alert('新投票主題標題不可為空！');
+      }
+
+      btn.disabled = true;
+      const originalText = btn.textContent;
+      btn.textContent = '複製中...';
+
+      try {
+        // 取出預設選項（排除填答者動態自填項目，保留原始設定項目）
+        let baseOptions = (poll.options || []).filter(o => !o.isCustom).map(o => o.text);
+        if (baseOptions.length < 2) {
+          baseOptions = (poll.options || []).map(o => o.text);
+        }
+        if (baseOptions.length < 2) {
+          return alert('原始投票選項少於 2 個，無法複製！');
+        }
+
+        const res = await fetch('/api/polls', {
+          method: 'POST',
+          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({
+            title: cleanTitle,
+            options: baseOptions,
+            isMultiple: Boolean(poll.isMultiple),
+            maxChoices: poll.maxChoices || 2,
+            note: poll.note || '',
+            allowCustomOption: Boolean(poll.allowCustomOption),
+            customOptionMaxLength: poll.customOptionMaxLength || 40
+          })
+        });
+
+        const data = await res.json();
+        handleAuthError(res, data);
+
+        await loadPolls();
+        alert(`🎉 投票已成功複製！\n全新投票主題：${cleanTitle}\n新投票短網址：${data.voteUrl}`);
+      } catch (err) {
+        alert(`複製投票失敗：${err.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    };
+  });
+
+  // 快速跳轉至紀錄查詢區塊
+  pollListEl.querySelectorAll('.viewLogBtn').forEach(btn => {
+    btn.onclick = () => {
+      const code = btn.dataset.code;
+      logPollSelect.value = code;
+      const logSection = document.getElementById('logSection');
+      if (logSection) {
+        logSection.scrollIntoView({ behavior: 'smooth' });
+      }
+      fetchAndRenderPollLog(code);
     };
   });
 }
