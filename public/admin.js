@@ -657,11 +657,16 @@ async function fetchAndRenderPollLog(shortCode) {
         }).join('');
       }
 
+      // 顯示投票者：優先顯示暱稱，無則顯示縮短 ID
+      const displayName = item.voterName
+        ? `<span style="font-weight:600; color:#1e293b;">${escapeHtml(item.voterName)}</span>`
+        : `<span class="voter-id-badge" title="${escapeHtml(item.voterId || '')}">${escapeHtml((item.voterId || '匿名').slice(0, 10))}${(item.voterId || '').length > 10 ? '...' : ''}</span>`;
+
       return `
         <tr>
           <td style="color:var(--text-muted); font-size:12px;">#${logCount - idx}</td>
           <td style="white-space:nowrap; font-size:12.5px;">${timeStr}</td>
-          <td><span class="voter-id-badge">${escapeHtml(item.voterId || '匿名訪客')}</span></td>
+          <td>${displayName}</td>
           <td>${choicesHtml}</td>
           <td style="white-space:nowrap;">${actionBadge}</td>
         </tr>
@@ -690,7 +695,7 @@ async function fetchAndRenderPollLog(shortCode) {
             <tr>
               <th style="width:45px;">序號</th>
               <th style="width:160px;">投票時間</th>
-              <th style="width:130px;">投票者 (Voter ID)</th>
+              <th style="width:120px;">投票者</th>
               <th>選擇項目</th>
               <th style="width:90px;">狀態</th>
             </tr>
@@ -780,14 +785,14 @@ async function loadPolls() {
             </div>
           </div>
           <div class="poll-item-actions">
-            <button class="btn-secondary editPollBtn" data-code="${p.shortCode}">✏️ 編輯標題/備註</button>
-            <button class="btn-secondary duplicateBtn" data-code="${p.shortCode}">📋 複製為新投票</button>
-            <button class="btn-secondary viewLogBtn" data-code="${p.shortCode}">📊 查詢紀錄</button>
+            <button class="btn-secondary editPollBtn" data-code="${p.shortCode}">✏️ 編輯</button>
+            <button class="btn-secondary duplicateBtn" data-code="${p.shortCode}">📋 複製</button>
+            <button class="btn-secondary viewLogBtn" data-code="${p.shortCode}">📊 紀錄</button>
             <button class="btn-secondary toggleBtn" data-code="${p.shortCode}" data-active="${p.active}">
-              ${p.active ? '結束投票' : '重新開放'}
+              ${p.active ? '⏸️ 結束' : '▶️ 開放'}
             </button>
-            <button class="btn-secondary syncBtn" data-code="${p.shortCode}">同步到 Sheet</button>
-            <button class="btn-danger deleteBtn" data-code="${p.shortCode}">刪除</button>
+            <button class="btn-secondary syncBtn" data-code="${p.shortCode}">🔄 同步 Sheet</button>
+            <button class="btn-danger deleteBtn" data-code="${p.shortCode}">🗑️ 刪除</button>
           </div>
         </div>
         ${noteHtml}
@@ -877,7 +882,7 @@ async function loadPolls() {
         alert('同步失敗：' + err.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = '同步到 Sheet';
+        btn.textContent = '🔄 同步 Sheet';
       }
     };
   });

@@ -297,7 +297,7 @@ app.post('/api/polls/:shortCode/vote', async (req, res) => {
     return res.status(400).json({ error: `本投票最多只能選擇 ${limit} 項` });
   }
 
-  const voteResult = await db.submitVote(req.params.shortCode, { voterId, optionIndices: selected, customText });
+  const voteResult = await db.submitVote(req.params.shortCode, { voterId, voterName, optionIndices: selected, customText });
   if (voteResult.error) {
     return res.status(400).json({ error: voteResult.error });
   }

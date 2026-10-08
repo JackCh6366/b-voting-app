@@ -32,7 +32,7 @@ body {
 }
 
 .container {
-  max-width: 660px;
+  max-width: 760px;
   margin: 0 auto;
 }
 
@@ -269,14 +269,13 @@ button:disabled {
 
 .poll-item-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 14px;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
 }
 
 .poll-item-info {
-  flex: 1;
-  min-width: 0;
+  width: 100%;
 }
 
 .poll-title {
@@ -284,12 +283,13 @@ button:disabled {
   font-weight: 700;
   color: var(--text-main);
   word-break: break-word;
+  line-height: 1.45;
 }
 
 .poll-meta {
   color: var(--text-muted);
   font-size: 13px;
-  margin-top: 5px;
+  margin-top: 6px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -299,16 +299,23 @@ button:disabled {
 .poll-item-actions {
   display: flex;
   gap: 8px;
-  flex-shrink: 0;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed var(--border-color);
 }
 
 .poll-item-actions button {
-  min-height: 38px;
+  min-height: 34px;
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: 12.5px;
+  font-weight: 500;
   border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 .link-box {

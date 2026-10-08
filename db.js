@@ -150,7 +150,7 @@ async function updatePoll(shortCode, { title, options, active, isMultiple, maxCh
 }
 
 // 提交投票或更換選項（核心函式）
-async function submitVote(shortCode, { voterId, optionIndices, customText }) {
+async function submitVote(shortCode, { voterId, voterName, optionIndices, customText }) {
   const poll = await getPollByShortCode(shortCode);
   if (!poll) return { error: '找不到這個投票' };
   if (!poll.active) return { error: '這個投票已經結束，無法進行投票或更換選項' };
@@ -256,6 +256,7 @@ async function submitVote(shortCode, { voterId, optionIndices, customText }) {
   poll.voteLog.push({
     timestamp: Date.now(),
     voterId,
+    voterName: (voterName || '').toString().trim().slice(0, 20) || null,
     previousIndices,
     newIndices: uniqueIndices,
     customText: cleanCustomText || null,
