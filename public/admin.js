@@ -46,11 +46,14 @@ const cancelPollModalBtn = document.getElementById('cancelPollModalBtn');
 const savePollModalBtn = document.getElementById('savePollModalBtn');
 let currentEditingShortCode = null;
 
-// 投票主題紀錄查詢元件
+// 投票主題表單查詢與統計元件
 const logPollSelect = document.getElementById('logPollSelect');
 const queryLogBtn = document.getElementById('queryLogBtn');
 const refreshLogBtn = document.getElementById('refreshLogBtn');
 const logResultContainer = document.getElementById('logResultContainer');
+const tabStatsBtn = document.getElementById('tabStatsBtn');
+const tabLogBtn = document.getElementById('tabLogBtn');
+let currentQueryMode = 'stats'; // 'stats' 或 'log'
 let cachedPolls = [];
 
 // ---------- 管理者金鑰儲存與狀態管理 ----------
@@ -564,9 +567,13 @@ savePollModalBtn.onclick = async () => {
     closeEditPollModal();
     await loadPolls();
 
-    // 若當前紀錄查詢區剛好正顯示此投票，自動同步更新紀錄區顯示
+    // 若當前表單查詢區剛好正顯示此投票，自動同步更新顯示
     if (logPollSelect && logPollSelect.value === currentEditingShortCode) {
-      fetchAndRenderPollLog(currentEditingShortCode);
+      if (currentQueryMode === 'stats') {
+        fetchAndRenderPollStats(currentEditingShortCode);
+      } else {
+        fetchAndRenderPollLog(currentEditingShortCode);
+      }
     }
     alert('✅ 投票主題與備註已更新成功！');
   } catch (err) {
@@ -576,6 +583,170 @@ savePollModalBtn.onclick = async () => {
     savePollModalBtn.textContent = '儲存修改';
   }
 };
+
+// ---------- 查詢模式切換控制 ----------
+
+function switchQueryMode(mode) {
+  currentQueryMode = mode;
+  if (tabStatsBtn && tabLogBtn) {
+    tabStatsBtn.classList.toggle('active', mode === 'stats');
+    tabLogBtn.classList.toggle('active', mode === 'log');
+  }
+  if (queryLogBtn) {
+    queryLogBtn.textContent = mode === 'stats' ? '📊 查詢統計' : '🔍 查詢紀錄';
+  }
+}
+
+if (tabStatsBtn && tabLogBtn) {
+  tabStatsBtn.onclick = () => {
+    switchQueryMode('stats');
+    const code = logPollSelect.value;
+    if (code) {
+      fetchAndRenderPollStats(code);
+    } else {
+      logResultContainer.innerHTML = '<div class="empty">請由上方選單選擇投票主題後點選「查詢統計」</div>';
+    }
+  };
+
+  tabLogBtn.onclick = () => {
+    switchQueryMode('log');
+    const code = logPollSelect.value;
+    if (code) {
+      fetchAndRenderPollLog(code);
+    } else {
+      logResultContainer.innerHTML = '<div class="empty">請由上方選單選擇投票主題後點選「查詢紀錄」</div>';
+    }
+  };
+}
+
+// ---------- 單張投票選項加總統計邏輯 ----------
+
+async function fetchAndRenderPollStats(shortCode) {
+  if (!shortCode) {
+    logResultContainer.innerHTML = '<div class="empty">請由上方選單選擇投票主題後點選「查詢統計」</div>';
+    return;
+  }
+
+  queryLogBtn.disabled = true;
+  refreshLogBtn.disabled = true;
+  logResultContainer.innerHTML = '<div class="empty">⏳ 正在載入選項加總統計資料，請稍候...</div>';
+
+  try {
+    const res = await fetch(`/api/admin/polls/${encodeURIComponent(shortCode)}/stats`, {
+      headers: getAuthHeaders()
+    });
+    const data = await res.json();
+    handleAuthError(res, data);
+
+    const totalVotes = Number(data.totalVotes) || 0;
+    const voterCount = Number(data.voterCount) || 0;
+    const options = Array.isArray(data.options) ? data.options : [];
+    const isMultiple = Boolean(data.isMultiple);
+    const maxChoices = data.maxChoices || 1;
+
+    const modeText = isMultiple
+      ? `<span class="badge multi" style="vertical-align:middle;">複選（上限 ${maxChoices} 票）</span>`
+      : `<span class="badge single" style="vertical-align:middle;">單選</span>`;
+
+    // 依票數產生各選項統計列
+    const rowsHtml = options.map((opt, idx) => {
+      const customTag = opt.isCustom ? `<span class="badge-custom-tag">[自填]</span>` : '';
+      const pctVotes = typeof opt.percentageOfVotes === 'number' ? opt.percentageOfVotes : 0;
+      const pctVoters = typeof opt.percentageOfVoters === 'number' ? opt.percentageOfVoters : 0;
+
+      // 排名色彩標記
+      const rankClass = idx === 0 ? 'stats-rank-1' : (idx === 1 ? 'stats-rank-2' : (idx === 2 ? 'stats-rank-3' : ''));
+
+      let pctDisplayHtml = '';
+      if (isMultiple) {
+        pctDisplayHtml = `
+          <div class="stats-pct-wrap">
+            <div class="stats-pct-text">
+              <span>${pctVotes.toFixed(1)}%</span>
+              <span class="stats-sub-pct">人次比 ${pctVoters.toFixed(1)}%</span>
+            </div>
+            <div class="stats-bar-bg"><div class="stats-bar-fill" style="width:${Math.min(100, pctVotes)}%;"></div></div>
+          </div>
+        `;
+      } else {
+        pctDisplayHtml = `
+          <div class="stats-pct-wrap">
+            <div class="stats-pct-text">
+              <span>${pctVotes.toFixed(1)}%</span>
+            </div>
+            <div class="stats-bar-bg"><div class="stats-bar-fill" style="width:${Math.min(100, pctVotes)}%;"></div></div>
+          </div>
+        `;
+      }
+
+      return `
+        <tr>
+          <td style="text-align:center;"><span class="stats-rank ${rankClass}">${idx + 1}</span></td>
+          <td>
+            <div class="stats-opt-name">${escapeHtml(opt.text)} ${customTag}</div>
+          </td>
+          <td style="text-align:right;"><span class="stats-vote-count">${opt.votes}</span> <span style="font-size:12px; color:var(--text-muted);">票</span></td>
+          <td>${pctDisplayHtml}</td>
+        </tr>
+      `;
+    }).join('');
+
+    const emptyHint = options.length === 0
+      ? `<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:20px;">此投票主題尚無任何選項</td></tr>`
+      : '';
+
+    logResultContainer.innerHTML = `
+      <div class="log-stats-bar">
+        <div class="log-stat-card">
+          <div class="log-stat-title">查詢主題</div>
+          <div class="log-stat-value" style="font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(data.title)}">${escapeHtml(data.title)}</div>
+        </div>
+        <div class="log-stat-card">
+          <div class="log-stat-title">總票數</div>
+          <div class="log-stat-value">${totalVotes} <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">票</span></div>
+        </div>
+        <div class="log-stat-card">
+          <div class="log-stat-title">投票人數</div>
+          <div class="log-stat-value">${voterCount} <span style="font-size:12px; font-weight:normal; color:var(--text-muted);">人</span></div>
+        </div>
+        <div class="log-stat-card">
+          <div class="log-stat-title">投票模式</div>
+          <div class="log-stat-value" style="font-size:13px; font-weight:600; padding-top:4px;">${modeText}</div>
+        </div>
+      </div>
+
+      <div class="stats-card-header">
+        <div class="stats-header-title">
+          <span>📊 單張選項票數加總統計表</span>
+          <span style="font-size:12px; font-weight:normal; color:var(--text-muted); font-family:sans-serif;">（預設依票數由高到低排序）</span>
+        </div>
+        <div class="stats-header-badge">表頭總票數：<strong>${totalVotes}</strong> 票</div>
+      </div>
+
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th style="width:45px; text-align:center;">排名</th>
+              <th>選項名稱</th>
+              <th style="width:75px; text-align:right;">票數</th>
+              <th style="width:140px;">百分比</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+            ${emptyHint}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (err) {
+    logResultContainer.innerHTML = `<div class="empty" style="color:#ef4444;">查詢統計失敗：${escapeHtml(err.message)}</div>`;
+  } finally {
+    queryLogBtn.disabled = false;
+    refreshLogBtn.disabled = false;
+  }
+}
 
 // ---------- 投票主題紀錄查詢邏輯 ----------
 
@@ -719,7 +890,11 @@ queryLogBtn.onclick = () => {
   if (!code) {
     return alert('請先從下拉選單選擇要查詢的投票主題！');
   }
-  fetchAndRenderPollLog(code);
+  if (currentQueryMode === 'stats') {
+    fetchAndRenderPollStats(code);
+  } else {
+    fetchAndRenderPollLog(code);
+  }
 };
 
 refreshLogBtn.onclick = () => {
@@ -727,14 +902,22 @@ refreshLogBtn.onclick = () => {
   if (!code) {
     return alert('請先從下拉選單選擇要查詢的投票主題！');
   }
-  fetchAndRenderPollLog(code);
+  if (currentQueryMode === 'stats') {
+    fetchAndRenderPollStats(code);
+  } else {
+    fetchAndRenderPollLog(code);
+  }
 };
 
 logPollSelect.onchange = () => {
   if (logPollSelect.value) {
-    fetchAndRenderPollLog(logPollSelect.value);
+    if (currentQueryMode === 'stats') {
+      fetchAndRenderPollStats(logPollSelect.value);
+    } else {
+      fetchAndRenderPollLog(logPollSelect.value);
+    }
   } else {
-    logResultContainer.innerHTML = '<div class="empty">請由上方選單選擇投票主題後點選「查詢紀錄」</div>';
+    logResultContainer.innerHTML = `<div class="empty">請由上方選單選擇投票主題後點選「${currentQueryMode === 'stats' ? '查詢統計' : '查詢紀錄'}」</div>`;
   }
 };
 
@@ -751,6 +934,34 @@ async function loadPolls() {
     cachedPolls.map(p => `<option value="${p.shortCode}">${escapeHtml(p.title)} (${p.shortCode})</option>`).join('');
   if (prevSelected && cachedPolls.some(p => p.shortCode === prevSelected)) {
     logPollSelect.value = prevSelected;
+  }
+
+  // 渲染快速切換標籤按鈕
+  const quickPollChips = document.getElementById('quickPollChips');
+  if (quickPollChips) {
+    // 優先包含測試主題，其餘取前 4 筆
+    const priorityCodes = ['single1', 'multi1', 'custom1', 'zero1'];
+    const priorityPolls = cachedPolls.filter(p => priorityCodes.includes(p.shortCode));
+    const otherPolls = cachedPolls.filter(p => !priorityCodes.includes(p.shortCode)).slice(0, 3);
+    const chipPolls = [...priorityPolls, ...otherPolls];
+
+    quickPollChips.innerHTML = chipPolls.map(p => `
+      <button type="button" class="btn-secondary btn-sm quick-chip-btn" data-code="${p.shortCode}" style="padding:3px 8px; font-size:11.5px; border-radius:6px; background:#fff; cursor:pointer;" id="chip_${p.shortCode}">
+        ${escapeHtml(p.shortCode)}: ${escapeHtml(p.title.slice(0, 8))}${p.title.length > 8 ? '..' : ''}
+      </button>
+    `).join('');
+
+    quickPollChips.querySelectorAll('.quick-chip-btn').forEach(btn => {
+      btn.onclick = () => {
+        const code = btn.dataset.code;
+        logPollSelect.value = code;
+        if (currentQueryMode === 'stats') {
+          fetchAndRenderPollStats(code);
+        } else {
+          fetchAndRenderPollLog(code);
+        }
+      };
+    });
   }
 
   if (cachedPolls.length === 0) {
@@ -787,7 +998,8 @@ async function loadPolls() {
           <div class="poll-item-actions">
             <button class="btn-secondary editPollBtn" data-code="${p.shortCode}">✏️ 編輯</button>
             <button class="btn-secondary duplicateBtn" data-code="${p.shortCode}">📋 複製</button>
-            <button class="btn-secondary viewLogBtn" data-code="${p.shortCode}">📊 紀錄</button>
+            <button class="btn-secondary viewStatsBtn" data-code="${p.shortCode}">📊 統計</button>
+            <button class="btn-secondary viewLogBtn" data-code="${p.shortCode}">📝 紀錄</button>
             <button class="btn-secondary toggleBtn" data-code="${p.shortCode}" data-active="${p.active}">
               ${p.active ? '⏸️ 結束' : '▶️ 開放'}
             </button>
@@ -955,10 +1167,25 @@ async function loadPolls() {
     };
   });
 
-  // 快速跳轉至紀錄查詢區塊
+  // 快速跳轉至單張投票選項加總統計表
+  pollListEl.querySelectorAll('.viewStatsBtn').forEach(btn => {
+    btn.onclick = () => {
+      const code = btn.dataset.code;
+      switchQueryMode('stats');
+      logPollSelect.value = code;
+      const logSection = document.getElementById('logSection');
+      if (logSection) {
+        logSection.scrollIntoView({ behavior: 'smooth' });
+      }
+      fetchAndRenderPollStats(code);
+    };
+  });
+
+  // 快速跳轉至明細紀錄區塊
   pollListEl.querySelectorAll('.viewLogBtn').forEach(btn => {
     btn.onclick = () => {
       const code = btn.dataset.code;
+      switchQueryMode('log');
       logPollSelect.value = code;
       const logSection = document.getElementById('logSection');
       if (logSection) {

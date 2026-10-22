@@ -1300,4 +1300,207 @@ html, body {
   }
 }
 
+/* ==========================================================================
+   後台：單張投票選項加總統計樣式與分頁標籤
+   ========================================================================== */
+.query-tab-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1.5px solid var(--border-color);
+  padding-bottom: 8px;
+}
+
+.query-tab-btn {
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.query-tab-btn:hover {
+  color: var(--text-main);
+  background: #f1f5f9;
+}
+
+.query-tab-btn.active {
+  color: var(--primary);
+  background: var(--primary-light);
+  border-bottom: 2px solid var(--primary);
+}
+
+.stats-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  border-bottom: none;
+}
+
+.stats-header-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stats-header-badge {
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--primary-light);
+  color: var(--primary);
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid #c7d2fe;
+}
+
+.stats-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  background: #ffffff;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  text-align: left;
+}
+
+.stats-table th {
+  background: #f8fafc;
+  color: #475569;
+  padding: 10px 12px;
+  font-weight: 600;
+  border-bottom: 1.5px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.stats-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.stats-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-table tr:hover td {
+  background: #fdfdfd;
+}
+
+.stats-rank {
+  font-weight: 700;
+  font-size: 12px;
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  text-align: center;
+  border-radius: 50%;
+  display: inline-block;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.stats-rank-1 {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.stats-rank-2 {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.stats-rank-3 {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.stats-opt-name {
+  font-weight: 500;
+  color: var(--text-main);
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.stats-vote-count {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.stats-pct-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 110px;
+}
+
+.stats-pct-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.stats-sub-pct {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.stats-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.stats-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary) 0%, #818cf8 100%);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+@media (max-width: 600px) {
+  .stats-pct-wrap {
+    min-width: 85px;
+  }
+  .stats-table th, .stats-table td {
+    padding: 8px 6px;
+    font-size: 12.5px;
+  }
+  .query-tab-btn {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+}
+
+
 

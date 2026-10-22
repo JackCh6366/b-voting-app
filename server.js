@@ -199,6 +199,67 @@ app.put('/api/polls/:shortCode', requireAdminAuth, async (req, res) => {
   }
 });
 
+// 管理員專用端點：單張投票選項加總統計（僅限選項文字與票數，不含任何個資）
+app.get('/api/admin/polls/:shortCode/stats', requireAdminAuth, async (req, res) => {
+  try {
+    const poll = await db.getPollByShortCode(req.params.shortCode);
+    if (!poll) return res.status(404).json({ error: '找不到這個投票' });
+
+    const voterCount = poll.voters ? Object.keys(poll.voters).length : 0;
+
+    // 自填選項（isCustom）與預設選項彙整
+    // 自填項目若文字相同則合併票數，保留 [自填] 標記
+    const mergedMap = new Map();
+    (poll.options || []).forEach(o => {
+      const cleanText = (o.text || '').toString().trim().replace(/\s+/g, ' ');
+      const key = `${cleanText.toLowerCase()}__${Boolean(o.isCustom)}`;
+      if (mergedMap.has(key)) {
+        const item = mergedMap.get(key);
+        item.votes += (Number(o.votes) || 0);
+      } else {
+        mergedMap.set(key, {
+          text: cleanText || o.text,
+          votes: Number(o.votes) || 0,
+          isCustom: Boolean(o.isCustom)
+        });
+      }
+    });
+
+    const aggregatedOptions = Array.from(mergedMap.values());
+    const totalVotes = aggregatedOptions.reduce((sum, o) => sum + o.votes, 0);
+
+    // 預設依票數由高到低排序
+    aggregatedOptions.sort((a, b) => b.votes - a.votes);
+
+    // 計算百分比（總票數或人數為 0 時安全回傳 0，避免除以零或 NaN）
+    const formattedOptions = aggregatedOptions.map(o => {
+      const percentageOfVotes = totalVotes > 0 ? Number(((o.votes / totalVotes) * 100).toFixed(1)) : 0;
+      const percentageOfVoters = voterCount > 0 ? Number(((o.votes / voterCount) * 100).toFixed(1)) : 0;
+      return {
+        text: o.text,
+        votes: o.votes,
+        isCustom: o.isCustom,
+        percentageOfVotes,
+        percentageOfVoters
+      };
+    });
+
+    // 嚴格確保不回傳 voters, voteLog, 暱稱等任何個人資訊
+    res.json({
+      shortCode: poll.shortCode,
+      title: poll.title,
+      isMultiple: Boolean(poll.isMultiple),
+      maxChoices: poll.maxChoices || 1,
+      totalVotes,
+      voterCount,
+      options: formattedOptions
+    });
+  } catch (err) {
+    console.error('讀取投票統計失敗：', err);
+    res.status(500).json({ error: '讀取投票統計失敗，請稍後再試' });
+  }
+});
+
 // 管理員專用端點：檢視投票詳細審計日誌與投票者對應（僅限授權管理員存取）
 app.get('/api/admin/polls/:shortCode/log', requireAdminAuth, async (req, res) => {
   try {

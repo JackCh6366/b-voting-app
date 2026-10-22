@@ -697,6 +697,298 @@
           0
         ]
       }
+    },
+    "single1": {
+      "id": "test_single_001",
+      "shortCode": "single1",
+      "title": "【測試】最受歡迎程式語言票選（單選）",
+      "note": "單選投票測試案例",
+      "options": [
+        {
+          "index": 0,
+          "text": "JavaScript",
+          "votes": 2,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "Python",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "Go",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 3,
+          "text": "Rust",
+          "votes": 0,
+          "isCustom": false
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": false,
+      "customOptionMaxLength": 40,
+      "createdAt": 1792631571610,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1792631571621,
+          "voterId": "v1",
+          "voterName": "Alice",
+          "previousIndices": null,
+          "newIndices": [
+            0
+          ],
+          "customText": null,
+          "isChange": false
+        },
+        {
+          "timestamp": 1792631571628,
+          "voterId": "v2",
+          "voterName": "Bob",
+          "previousIndices": null,
+          "newIndices": [
+            0
+          ],
+          "customText": null,
+          "isChange": false
+        },
+        {
+          "timestamp": 1792631571635,
+          "voterId": "v3",
+          "voterName": "Charlie",
+          "previousIndices": null,
+          "newIndices": [
+            1
+          ],
+          "customText": null,
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "v1": [
+          0
+        ],
+        "v2": [
+          0
+        ],
+        "v3": [
+          1
+        ]
+      }
+    },
+    "multi1": {
+      "id": "test_multi_002",
+      "shortCode": "multi1",
+      "title": "【測試】團隊聚餐地點票選（複選最多 2 項）",
+      "note": "複選投票測試案例",
+      "options": [
+        {
+          "index": 0,
+          "text": "日式精緻燒肉",
+          "votes": 2,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "韓式炸雞啤酒",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "泰式料理",
+          "votes": 2,
+          "isCustom": false
+        },
+        {
+          "index": 3,
+          "text": "義大利麵",
+          "votes": 0,
+          "isCustom": false
+        }
+      ],
+      "isMultiple": true,
+      "maxChoices": 2,
+      "allowCustomOption": false,
+      "customOptionMaxLength": 40,
+      "createdAt": 1792631571641,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1792631571648,
+          "voterId": "v1",
+          "voterName": "Alice",
+          "previousIndices": null,
+          "newIndices": [
+            0,
+            2
+          ],
+          "customText": null,
+          "isChange": false
+        },
+        {
+          "timestamp": 1792631571654,
+          "voterId": "v2",
+          "voterName": "Bob",
+          "previousIndices": null,
+          "newIndices": [
+            0,
+            1
+          ],
+          "customText": null,
+          "isChange": false
+        },
+        {
+          "timestamp": 1792631571661,
+          "voterId": "v3",
+          "voterName": "Charlie",
+          "previousIndices": null,
+          "newIndices": [
+            2
+          ],
+          "customText": null,
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "v1": [
+          0,
+          2
+        ],
+        "v2": [
+          0,
+          1
+        ],
+        "v3": [
+          2
+        ]
+      }
+    },
+    "custom1": {
+      "id": "test_custom_003",
+      "shortCode": "custom1",
+      "title": "【測試】下午茶點心投票（含開放自填選項）",
+      "note": "含自填選項測試案例",
+      "options": [
+        {
+          "index": 0,
+          "text": "珍珠奶茶",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "雞排",
+          "votes": 1,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "四季春茶",
+          "votes": 2,
+          "isCustom": true
+        },
+        {
+          "index": 3,
+          "text": "手工布丁",
+          "votes": 1,
+          "isCustom": true
+        }
+      ],
+      "isMultiple": true,
+      "maxChoices": 2,
+      "allowCustomOption": true,
+      "customOptionMaxLength": 40,
+      "createdAt": 1792631571667,
+      "active": true,
+      "voteLog": [
+        {
+          "timestamp": 1792631571674,
+          "voterId": "v1",
+          "voterName": "Alice",
+          "previousIndices": null,
+          "newIndices": [
+            1,
+            2
+          ],
+          "customText": "四季春茶",
+          "isChange": false
+        },
+        {
+          "timestamp": 1792631571681,
+          "voterId": "v2",
+          "voterName": "Bob",
+          "previousIndices": null,
+          "newIndices": [
+            2
+          ],
+          "customText": "四季春茶",
+          "isChange": false
+        },
+        {
+          "timestamp": 1792631571687,
+          "voterId": "v3",
+          "voterName": "Charlie",
+          "previousIndices": null,
+          "newIndices": [
+            3
+          ],
+          "customText": "手工布丁",
+          "isChange": false
+        }
+      ],
+      "voters": {
+        "v1": [
+          1,
+          2
+        ],
+        "v2": [
+          2
+        ],
+        "v3": [
+          3
+        ]
+      }
+    },
+    "zero1": {
+      "id": "test_zero_004",
+      "shortCode": "zero1",
+      "title": "【測試】無人投票測試（票數與人數皆為 0）",
+      "note": "零票除零保護測試",
+      "options": [
+        {
+          "index": 0,
+          "text": "選項 A",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 1,
+          "text": "選項 B",
+          "votes": 0,
+          "isCustom": false
+        },
+        {
+          "index": 2,
+          "text": "選項 C",
+          "votes": 0,
+          "isCustom": false
+        }
+      ],
+      "isMultiple": false,
+      "maxChoices": 1,
+      "allowCustomOption": false,
+      "customOptionMaxLength": 40,
+      "createdAt": 1792631571693,
+      "active": true,
+      "voteLog": [],
+      "voters": {}
     }
   },
   "systemConfig": {

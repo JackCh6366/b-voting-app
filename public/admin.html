@@ -138,13 +138,19 @@
       <div id="pollList"><div class="empty">尚未建立任何投票</div></div>
     </div>
 
-    <!-- 投票紀錄查詢卡片 -->
+    <!-- 投票表單查詢與統計卡片 -->
     <div class="card" id="logSection">
       <div class="card-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
         <h2 style="font-size:16px; margin:0; display:flex; align-items:center; gap:6px;">
-          <span>📊 投票主題紀錄查詢</span>
+          <span>📊 投票表單查詢與統計</span>
         </h2>
-        <span style="font-size:12px; color:var(--text-muted);">查看投票者明細、時間與選擇</span>
+        <span style="font-size:12px; color:var(--text-muted);">查看單張選項加總統計表，或查詢投票明細</span>
+      </div>
+
+      <!-- 模式切換頁籤：統計表 / 明細紀錄 -->
+      <div class="query-tab-group" id="queryTabGroup">
+        <button type="button" class="query-tab-btn active" id="tabStatsBtn" data-mode="stats">📊 選項加總統計</button>
+        <button type="button" class="query-tab-btn" id="tabLogBtn" data-mode="log">📝 投票明細紀錄</button>
       </div>
 
       <div class="log-query-bar">
@@ -153,16 +159,17 @@
           <select id="logPollSelect" class="styled-select">
             <option value="">-- 請選擇投票主題 --</option>
           </select>
+          <div class="quick-poll-chips" id="quickPollChips" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;"></div>
         </div>
         <div class="log-btn-group">
-          <button class="btn-primary" id="queryLogBtn" type="button">🔍 查詢紀錄</button>
-          <button class="btn-secondary" id="refreshLogBtn" type="button" title="重新整理當前投票紀錄">🔄</button>
+          <button class="btn-primary" id="queryLogBtn" type="button">📊 查詢統計</button>
+          <button class="btn-secondary" id="refreshLogBtn" type="button" title="重新整理當前查詢內容">🔄</button>
         </div>
       </div>
 
-      <!-- 紀錄查詢結果容器 -->
+      <!-- 查詢與統計結果容器 -->
       <div id="logResultContainer" style="margin-top:16px;">
-        <div class="empty">請由上方選單選擇投票主題後點選「查詢紀錄」</div>
+        <div class="empty">請由上方選單選擇投票主題後點選「查詢統計」</div>
       </div>
     </div>
   </div>
