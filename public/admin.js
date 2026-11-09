@@ -55,6 +55,7 @@ const tabStatsBtn = document.getElementById('tabStatsBtn');
 const tabLogBtn = document.getElementById('tabLogBtn');
 let currentQueryMode = 'stats'; // 'stats' 或 'log'
 let cachedPolls = [];
+let duplicateDraft = false;
 
 // ---------- 管理者金鑰儲存與狀態管理 ----------
 const authModal = document.getElementById('authModal');
@@ -284,13 +285,6 @@ function updateMultiLimitBounds() {
   maxChoicesInput.max = maxLimit;
   maxChoicesInput.min = 2;
   maxChoicesHint.textContent = `（可設定 2 ~ ${maxLimit} 票，不能超過選項總數）`;
-
-  let currentVal = parseInt(maxChoicesInput.value, 10) || 2;
-  if (currentVal > maxLimit) {
-    maxChoicesInput.value = maxLimit;
-  } else if (currentVal < 2) {
-    maxChoicesInput.value = 2;
-  }
 }
 
 pollTypeRadios.forEach(radio => {
@@ -314,8 +308,16 @@ function addOptionRow(value = '') {
   row.className = 'option-row';
   row.innerHTML = `
     <input type="text" placeholder="選項內容" value="${escapeHtml(value)}" />
+    <button class="btn-secondary moveOptionUpBtn" type="button" aria-label="選項上移">↑</button>
+    <button class="btn-secondary moveOptionDownBtn" type="button" aria-label="選項下移">↓</button>
     <button class="btn-secondary removeOptionBtn" type="button">刪除</button>
   `;
+  row.querySelector('.moveOptionUpBtn').onclick = () => {
+    if (row.previousElementSibling) optionsList.insertBefore(row, row.previousElementSibling);
+  };
+  row.querySelector('.moveOptionDownBtn').onclick = () => {
+    if (row.nextElementSibling) optionsList.insertBefore(row.nextElementSibling, row);
+  };
   row.querySelector('.removeOptionBtn').onclick = () => {
     row.remove();
     updateMultiLimitBounds();
@@ -465,12 +467,15 @@ aiAnalyzeBtn.onclick = async () => {
 createBtn.onclick = async () => {
   const title = titleInput.value.trim();
   const note = noteInput.value.trim();
-  const options = [...optionsList.querySelectorAll('input[type="text"]')]
-    .map(i => i.value.trim())
-    .filter(Boolean);
+  const optionInputs = [...optionsList.querySelectorAll('input[type="text"]')];
+  const options = optionInputs.map(i => i.value.trim());
 
   if (!title) return alert('請輸入投票主題');
+  if (options.some(option => !option)) return alert('選項不可為空白，請填寫或刪除空白選項');
   if (options.length < 2) return alert('請至少輸入兩個選項');
+  if (options.some(option => option.length > 200)) return alert('每個選項最多 200 字');
+  const normalized = options.map(option => option.replace(/\s+/g, ' ').toLocaleLowerCase());
+  if (new Set(normalized).size !== normalized.length) return alert('選項文字不可重複（忽略大小寫與多餘空白）');
 
   const selectedType = document.querySelector('input[name="pollType"]:checked').value;
   const isMultiple = selectedType === 'multiple';
@@ -479,7 +484,7 @@ createBtn.onclick = async () => {
   if (isMultiple) {
     maxChoices = parseInt(maxChoicesInput.value, 10);
     if (isNaN(maxChoices) || maxChoices < 2 || maxChoices > options.length) {
-      return alert(`複選投票的最高票數限制必須介於 2 到 ${options.length} 之間！`);
+      return alert(`目前有 ${options.length} 個選項，複選上限需介於 2 到 ${options.length} 之間。請新增選項或調整 maxChoices。`);
     }
   }
 
@@ -516,7 +521,9 @@ createBtn.onclick = async () => {
     }
 
     await loadPolls();
-    alert(`投票建立成功！\n投票模式：${isMultiple ? `複選（每人最多 ${maxChoices} 票）` : '單選'}${allowCustomOption ? `\n自訂選項：已開啟（上限 ${customOptionMaxLength} 字）` : ''}\n短連結：${data.voteUrl}`);
+    alert(`${duplicateDraft ? '複製投票建立成功！' : '投票建立成功！'}\n投票模式：${isMultiple ? `複選（每人最多 ${maxChoices} 票）` : '單選'}${allowCustomOption ? `\n自訂選項：已開啟（上限 ${customOptionMaxLength} 字）` : ''}\n短連結：${data.voteUrl}`);
+    duplicateDraft = false;
+    createBtn.textContent = '建立投票';
   } catch (err) {
     alert(err.message);
   } finally {
@@ -1116,54 +1123,25 @@ async function loadPolls() {
       const poll = cachedPolls.find(p => p.shortCode === code);
       if (!poll) return;
 
-      const defaultTitle = `[副本] ${poll.title}`;
-      const newTitle = prompt('確定要複製此投票建立新主題嗎？\n請確認或修改新投票標題：', defaultTitle);
-      if (newTitle === null) return; // 使用者點選取消
-
-      const cleanTitle = newTitle.trim();
-      if (!cleanTitle) {
-        return alert('新投票主題標題不可為空！');
+      const baseOptions = (poll.options || []).filter(o => !o.isCustom).map(o => o.text);
+      if (baseOptions.length < 2) return alert('原始投票固定選項少於 2 個，無法複製！');
+      titleInput.value = `[副本] ${poll.title}`;
+      noteInput.value = poll.note || '';
+      optionsList.innerHTML = '';
+      baseOptions.forEach(option => addOptionRow(option));
+      const isMultiple = Boolean(poll.isMultiple);
+      document.querySelector(`input[name="pollType"][value="${isMultiple ? 'multiple' : 'single'}"]`).checked = true;
+      document.querySelector(`input[name="pollType"][value="${isMultiple ? 'multiple' : 'single'}"]`).dispatchEvent(new Event('change'));
+      maxChoicesInput.value = isMultiple ? (poll.maxChoices || 2) : 2;
+      if (allowCustomOptionCheckbox) {
+        allowCustomOptionCheckbox.checked = Boolean(poll.allowCustomOption);
+        allowCustomOptionCheckbox.dispatchEvent(new Event('change'));
       }
-
-      btn.disabled = true;
-      const originalText = btn.textContent;
-      btn.textContent = '複製中...';
-
-      try {
-        // 取出預設選項（排除填答者動態自填項目，保留原始設定項目）
-        let baseOptions = (poll.options || []).filter(o => !o.isCustom).map(o => o.text);
-        if (baseOptions.length < 2) {
-          baseOptions = (poll.options || []).map(o => o.text);
-        }
-        if (baseOptions.length < 2) {
-          return alert('原始投票選項少於 2 個，無法複製！');
-        }
-
-        const res = await fetch('/api/polls', {
-          method: 'POST',
-          headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
-          body: JSON.stringify({
-            title: cleanTitle,
-            options: baseOptions,
-            isMultiple: Boolean(poll.isMultiple),
-            maxChoices: poll.maxChoices || 2,
-            note: poll.note || '',
-            allowCustomOption: Boolean(poll.allowCustomOption),
-            customOptionMaxLength: poll.customOptionMaxLength || 40
-          })
-        });
-
-        const data = await res.json();
-        handleAuthError(res, data);
-
-        await loadPolls();
-        alert(`🎉 投票已成功複製！\n全新投票主題：${cleanTitle}\n新投票短網址：${data.voteUrl}`);
-      } catch (err) {
-        alert(`複製投票失敗：${err.message}`);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = originalText;
-      }
+      if (customMaxLengthInput) customMaxLengthInput.value = poll.customOptionMaxLength || 40;
+      duplicateDraft = true;
+      createBtn.textContent = '建立複製投票';
+      document.getElementById('createSection')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      titleInput.focus();
     };
   });
 

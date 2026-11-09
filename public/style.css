@@ -108,6 +108,11 @@ textarea:focus {
 
 .option-row button {
   flex-shrink: 0;
+  padding: 8px 10px;
+}
+
+.option-row input {
+  min-width: 0;
 }
 
 button {

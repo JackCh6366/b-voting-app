@@ -107,6 +107,20 @@ app.post('/api/polls', requireAdminAuth, async (req, res) => {
     return res.status(400).json({ error: '請提供投票主題，以及至少兩個選項' });
   }
 
+  if (typeof title !== 'string' || !title.trim()) {
+    return res.status(400).json({ error: '投票主題不可為空白' });
+  }
+  if (options.some(option => typeof option !== 'string' || !option.trim())) {
+    return res.status(400).json({ error: '選項不可為空白' });
+  }
+  if (options.some(option => option.length > 200)) {
+    return res.status(400).json({ error: '每個選項最多 200 字' });
+  }
+  const normalizedOptions = options.map(option => option.trim().replace(/\s+/g, ' ').toLocaleLowerCase());
+  if (new Set(normalizedOptions).size !== normalizedOptions.length) {
+    return res.status(400).json({ error: '選項文字不可重複（忽略大小寫與多餘空白）' });
+  }
+
   const multiple = Boolean(isMultiple);
   let limit = 1;
   if (multiple) {
@@ -121,9 +135,9 @@ app.post('/api/polls', requireAdminAuth, async (req, res) => {
     const poll = await db.createPoll({
       id: nanoid(12),
       shortCode,
-      title,
+      title: title.trim(),
       note,
-      options,
+      options: options.map(option => option.trim()),
       isMultiple: multiple,
       maxChoices: limit,
       allowCustomOption: Boolean(allowCustomOption),
